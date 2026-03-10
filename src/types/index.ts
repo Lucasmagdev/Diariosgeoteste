@@ -55,6 +55,7 @@ export interface WorkDiary {
   servicesExecuted: string;
   geotestSignature: string;
   geotestSignatureImage?: string;
+  geotestCpf?: string;
   responsibleSignature: string;
   observations: string;
   createdBy: string;

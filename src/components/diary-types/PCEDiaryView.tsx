@@ -1,5 +1,6 @@
 import React from 'react';
 import { PdfLayout, PdfRow, PdfSection, PdfTable, PdfValue } from './PdfLayout';
+import { GeotestSignatureValue } from './GeotestSignatureValue';
 
 interface PCEDiaryViewProps {
   diary: any;
@@ -144,20 +145,7 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
       <PdfSection title="Assinaturas" columns={2}>
         <PdfRow
           label="Geoteste"
-          value={
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px]">{diary.geotestSignature || '-'}</span>
-              {diary.geotestSignatureImage && (
-                <div className="h-10 flex items-center justify-center border border-gray-300 bg-white">
-                  <img
-                    src={diary.geotestSignatureImage}
-                    alt="Assinatura Geoteste"
-                    className="max-h-8 object-contain"
-                  />
-                </div>
-              )}
-            </div>
-          }
+          value={<GeotestSignatureValue diary={diary} />}
         />
         <PdfRow label="Cliente" placeholder />
       </PdfSection>

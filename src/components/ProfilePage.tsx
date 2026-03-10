@@ -12,16 +12,31 @@ export const ProfilePage: React.FC = () => {
   const toast = useToast();
   const [signatureImage, setSignatureImage] = useState('');
   const [signatureImageUrl, setSignatureImageUrl] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [cpfDraft, setCpfDraft] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingCpf, setIsEditingCpf] = useState(false);
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingCpf, setSavingCpf] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const normalizeCpf = (value: string) => value.replace(/\D/g, '').slice(0, 11);
+
+  const formatCpf = (value: string) => {
+    const digits = normalizeCpf(value);
+    if (!digits) return '';
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
 
   // Carregar dados do perfil (assinatura e foto)
   useEffect(() => {
@@ -34,7 +49,7 @@ export const ProfilePage: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('signature_image_url, photo_url')
+          .select('*')
           .eq('id', user.id)
           .single();
 
@@ -42,6 +57,9 @@ export const ProfilePage: React.FC = () => {
 
         setSignatureImageUrl(data?.signature_image_url || '');
         setPhotoUrl(data?.photo_url || null);
+        const loadedCpf = typeof data?.cpf === 'string' ? normalizeCpf(data.cpf) : '';
+        setCpf(loadedCpf);
+        setCpfDraft(loadedCpf);
         
         // Se houver URL, carregar a imagem para preview
         if (data?.signature_image_url) {
@@ -56,6 +74,8 @@ export const ProfilePage: React.FC = () => {
         setSignatureImage('');
         setPhotoUrl(null);
         setPhotoPreview(null);
+        setCpf('');
+        setCpfDraft('');
       } finally {
         setLoading(false);
       }
@@ -233,6 +253,52 @@ export const ProfilePage: React.FC = () => {
     setMessage(null);
   };
 
+  const handleEditCpf = () => {
+    setCpfDraft(cpf);
+    setIsEditingCpf(true);
+  };
+
+  const handleCancelCpf = () => {
+    setCpfDraft(cpf);
+    setIsEditingCpf(false);
+  };
+
+  const handleSaveCpf = async () => {
+    const normalizedCpf = normalizeCpf(cpfDraft);
+    if (normalizedCpf && normalizedCpf.length !== 11) {
+      toast.error('CPF invalido. Informe os 11 digitos.');
+      return;
+    }
+
+    if (!isSupabaseConfigured || !user?.id) {
+      setCpf(normalizedCpf);
+      setCpfDraft(normalizedCpf);
+      setIsEditingCpf(false);
+      toast.success('CPF salvo (modo demonstracao)');
+      return;
+    }
+
+    setSavingCpf(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ cpf: normalizedCpf || null })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setCpf(normalizedCpf);
+      setCpfDraft(normalizedCpf);
+      setIsEditingCpf(false);
+      toast.success('CPF salvo com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao salvar CPF:', err);
+      toast.error('Nao foi possivel salvar o CPF. Verifique se a coluna cpf ja foi criada no banco.');
+    } finally {
+      setSavingCpf(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -298,6 +364,50 @@ export const ProfilePage: React.FC = () => {
               <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium rounded-full mt-1">
                 {user?.role === 'admin' ? 'Administrador' : 'Usuário'}
               </span>
+              <div className="mt-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/70">
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">CPF</p>
+                {isEditingCpf ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={14}
+                      value={formatCpf(cpfDraft)}
+                      onChange={(e) => setCpfDraft(normalizeCpf(e.target.value))}
+                      placeholder="000.000.000-00"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleSaveCpf}
+                        disabled={savingCpf}
+                        className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {savingCpf ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                        <span>{savingCpf ? 'Salvando...' : 'Salvar'}</span>
+                      </button>
+                      <button
+                        onClick={handleCancelCpf}
+                        disabled={savingCpf}
+                        className="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-gray-900 dark:text-gray-100">{formatCpf(cpf) || '-'}</p>
+                    <button
+                      onClick={handleEditCpf}
+                      className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>Editar</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

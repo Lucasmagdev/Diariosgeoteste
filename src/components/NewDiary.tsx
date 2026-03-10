@@ -305,6 +305,17 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
       const ruaFormatada = enderecoDetalhado.rua.trim() || 'S/R';
       const numeroFormatado = enderecoDetalhado.numero.trim() || 'S/N';
       const enderecoCompleto = `${ruaFormatada}, ${numeroFormatado}, ${cidadeNome}, ${estado.nome}`;
+      let geotestSignatureImage = formData.geotestSignatureImage || '';
+
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('signature_image_url')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (currentProfile?.signature_image_url) {
+        geotestSignatureImage = currentProfile.signature_image_url;
+      }
 
       const payload: any = {
         user_id: user.id,
@@ -325,7 +336,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         end_time: formData.endTime,
         services_executed: formData.servicesExecuted.trim(),
         geotest_signature: user.name || null,
-        geotest_signature_url: formData.geotestSignatureImage || null,
+        geotest_signature_url: geotestSignatureImage || null,
         // Assinatura do responsável é coletada externamente (GOV.BR)
         responsible_signature: 'Assinatura externa (GOV.BR)',
         observations: formData.observations.trim() || null,

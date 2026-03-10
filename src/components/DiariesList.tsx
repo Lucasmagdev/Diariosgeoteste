@@ -42,6 +42,17 @@ const formatAddress = (address: string | null | undefined, enderecoDetalhado: an
   return address || '-';
 };
 
+const getCpfFromProfileOrDiary = (profile: any, diaryRow: any): string => {
+  const rawCpf =
+    profile?.cpf ??
+    profile?.documento ??
+    profile?.document ??
+    diaryRow?.geotest_signature_cpf ??
+    '';
+
+  return typeof rawCpf === 'string' ? rawCpf.trim() : '';
+};
+
 export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
   const { user } = useAuth();
   const toast = useToast();
@@ -293,7 +304,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
         const userIds = [...new Set((data || []).map((r: any) => r.user_id))];
         const { data: profilesData } = await supabase
           .from('profiles')
-          .select('id, name, signature_image_url')
+          .select('*')
           .in('id', userIds);
 
         const profilesMap = new Map();
@@ -345,7 +356,8 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             endTime: r.end_time,
             servicesExecuted: r.services_executed,
             geotestSignature: r.geotest_signature,
-            geotestSignatureImage: r.geotest_signature_url || profile?.signature_image_url || '',
+            geotestSignatureImage: profile?.signature_image_url || r.geotest_signature_url || '',
+            geotestCpf: getCpfFromProfileOrDiary(profile, r),
             responsibleSignature: r.responsible_signature,
             observations: r.observations || '',
             createdBy: profile?.name || user.name || '',
