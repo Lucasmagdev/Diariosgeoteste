@@ -104,7 +104,11 @@ export const PdfRow: React.FC<PdfRowProps> = ({ label, value = '-', span = 1, pl
     >
       <p className={`font-semibold uppercase ${labelTextClasses} mb-0 leading-tight`}>{label}</p>
       <div className="min-h-[16px] flex items-center text-[7px] break-words">
-        {placeholder ? <span className="border-b border-gray-400 w-full block h-12 mt-1"></span> : value}
+        {placeholder ? (
+          <div className="w-full min-h-[56px] flex items-end">
+            <span className="block w-full border-b border-gray-400"></span>
+          </div>
+        ) : value}
       </div>
     </div>
   );
@@ -122,13 +126,8 @@ export const PdfValue: React.FC<PdfValueProps> = ({ label, checked }) => {
 };
 
 const PdfCheckItem: React.FC<{ label: string; checked?: boolean }> = ({ label, checked }) => (
-  <div className="flex h-[10px] items-center gap-1 whitespace-nowrap">
-    <span className="inline-flex h-[7px] w-[7px] shrink-0 items-center justify-center border border-gray-700 bg-white">
-      {checked ? <span className="h-[3px] w-[3px] bg-gray-800"></span> : null}
-    </span>
-    <span className="text-[7px] leading-[7px]" style={{ transform: 'translateY(-0.5px)' }}>
-      {label}
-    </span>
+  <div className="whitespace-nowrap text-[7px] leading-[10px]">
+    {checked ? '☑' : '☐'} {label}
   </div>
 );
 
@@ -137,7 +136,7 @@ export const PdfClimateRow: React.FC<PdfClimateRowProps> = ({
   chuvaFraca,
   chuvaForte,
 }) => (
-  <div className="grid grid-cols-3 gap-1 px-0.5 py-0.5">
+  <div className="grid grid-cols-3 gap-1 px-0.5 py-1">
     <PdfCheckItem label="Ensolarado" checked={ensolarado} />
     <PdfCheckItem label="Chuva fraca" checked={chuvaFraca} />
     <PdfCheckItem label="Chuva forte" checked={chuvaForte} />

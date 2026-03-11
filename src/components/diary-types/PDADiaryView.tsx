@@ -1,5 +1,5 @@
 import React from 'react';
-import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfTable, PdfValue } from './PdfLayout';
+import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfTable } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
 import { formatTime24h } from '../../utils/time';
 
@@ -81,13 +81,12 @@ export const PDADiaryView: React.FC<PDADiaryViewProps> = ({
         <PdfRow
           label="Diesel?"
           value={
-            <div className="flex gap-2">
-              <PdfValue label="Sim" checked={pdaDiarioDetail?.entrega_chegou_diesel === true} />
-              <PdfValue label="Não" checked={pdaDiarioDetail?.entrega_chegou_diesel === false} />
+            <div className="grid grid-cols-2 gap-3 w-full text-[7px] leading-[10px]">
+              <span className="whitespace-nowrap">{pdaDiarioDetail?.entrega_chegou_diesel === true ? '\u2611' : '\u2610'} Sim</span>
+              <span className="whitespace-nowrap">{pdaDiarioDetail?.entrega_chegou_diesel === false ? '\u2611' : '\u2610'} Não</span>
             </div>
           }
-          span={2}
-        />
+          />
         <PdfRow label="Fornecido por" value={pdaDiarioDetail?.entrega_fornecido_por || '-'} />
         <PdfRow label="Quantidade (L)" value={pdaDiarioDetail?.entrega_quantidade_litros ?? '-'} />
         <PdfRow label="Horário" value={formatTime24h(pdaDiarioDetail?.entrega_horario_chegada)} />

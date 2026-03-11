@@ -18,14 +18,14 @@ export const GeotestSignatureValue: React.FC<GeotestSignatureValueProps> = ({ di
   const formattedCpf = formatCpf(diary?.geotestCpf);
 
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[8px]">{diary?.geotestSignature || '-'}</span>
+    <div className="flex min-h-[56px] flex-col justify-between gap-1">
+      <span className="text-[8px] leading-tight">{diary?.geotestSignature || '-'}</span>
       {diary?.geotestSignatureImage && (
-        <div className="h-10 flex items-center justify-center border border-gray-300 bg-white">
+        <div className="h-12 flex items-center justify-center border border-gray-300 bg-white">
           <img
             src={diary.geotestSignatureImage}
             alt="Assinatura Geoteste"
-            className="max-h-8 object-contain"
+            className="max-h-10 object-contain"
           />
         </div>
       )}
