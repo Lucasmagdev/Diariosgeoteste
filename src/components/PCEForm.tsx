@@ -337,7 +337,7 @@ export const PCEForm: React.FC<PCEFormProps> = ({ value, onChange }) => {
                   type="checkbox"
                   checked={value.carregamentoTipos.includes(opt)}
                   onChange={() => toggleCarregamento(opt)}
-                  className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                  className="app-checkbox"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-200">{opt}</span>
               </label>

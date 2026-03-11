@@ -250,6 +250,45 @@
 
 /* Classes utilitárias para botões */
 @layer components {
+  .app-checkbox {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    min-width: 1rem;
+    border: 1px solid #9ca3af;
+    border-radius: 0.2rem;
+    background-color: #ffffff;
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .app-checkbox::before {
+    content: '';
+    width: 0.3rem;
+    height: 0.55rem;
+    border-right: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: rotate(45deg) scale(0);
+    transform-origin: center;
+    transition: transform 0.12s ease-in-out;
+  }
+
+  .app-checkbox:checked {
+    background-color: #2563eb;
+    border-color: #2563eb;
+  }
+
+  .app-checkbox:checked::before {
+    transform: rotate(45deg) scale(1);
+  }
+
+  .app-checkbox:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.35);
+    outline-offset: 2px;
+  }
+
   .btn-primary {
     @apply bg-green-600 text-white px-4 py-2.5 rounded-lg font-medium 
            hover:bg-green-700 hover:scale-[1.02] transition-all duration-200

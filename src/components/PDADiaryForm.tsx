@@ -161,7 +161,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                     if (i >= 0) d.pdaComputadores.splice(i, 1);
                     else d.pdaComputadores.push(opt);
                   })}
-                  className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                  className="app-checkbox"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-200">{opt}</span>
               </label>
@@ -517,7 +517,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                       type="checkbox"
                       checked={value.abastecimento.equipamentos.includes(opt)}
                       onChange={() => toggleEquip(opt)}
-                      className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                      className="app-checkbox"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-200">{opt}</span>
                   </label>

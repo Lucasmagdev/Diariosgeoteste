@@ -1043,7 +1043,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                           type="checkbox"
                           checked={selectedTeamMembers.includes(member.id)}
                           onChange={() => handleTeamMemberToggle(member.id)}
-                          className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                          className="app-checkbox"
                         />
                         <div className="ml-3">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">{member.name}</p>
@@ -1136,7 +1136,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                     type="checkbox"
                     checked={weather.ensolarado}
                     onChange={(e) => setWeather((w) => ({ ...w, ensolarado: e.target.checked }))}
-                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    className="app-checkbox"
                   />
                   <span className="text-sm text-gray-800 dark:text-gray-200">Ensolarado</span>
                 </label>
@@ -1145,7 +1145,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                     type="checkbox"
                     checked={weather.chuvaFraca}
                     onChange={(e) => setWeather((w) => ({ ...w, chuvaFraca: e.target.checked }))}
-                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    className="app-checkbox"
                   />
                   <span className="text-sm text-gray-800 dark:text-gray-200">Chuva fraca</span>
                 </label>
@@ -1154,7 +1154,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                     type="checkbox"
                     checked={weather.chuvaForte}
                     onChange={(e) => setWeather((w) => ({ ...w, chuvaForte: e.target.checked }))}
-                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    className="app-checkbox"
                   />
                   <span className="text-sm text-gray-800 dark:text-gray-200">Chuva forte</span>
                 </label>
@@ -1299,7 +1299,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                     type="checkbox"
                     checked={weather.ensolarado}
                     onChange={(e) => setWeather((w) => ({ ...w, ensolarado: e.target.checked }))}
-                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    className="app-checkbox"
                   />
                   <span className="text-sm text-gray-800 dark:text-gray-200">Ensolarado</span>
                 </label>
@@ -1308,7 +1308,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                     type="checkbox"
                     checked={weather.chuvaFraca}
                     onChange={(e) => setWeather((w) => ({ ...w, chuvaFraca: e.target.checked }))}
-                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    className="app-checkbox"
                   />
                   <span className="text-sm text-gray-800 dark:text-gray-200">Chuva fraca</span>
                 </label>
@@ -1317,7 +1317,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                     type="checkbox"
                     checked={weather.chuvaForte}
                     onChange={(e) => setWeather((w) => ({ ...w, chuvaForte: e.target.checked }))}
-                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    className="app-checkbox"
                   />
                   <span className="text-sm text-gray-800 dark:text-gray-200">Chuva forte</span>
                 </label>
@@ -1431,7 +1431,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                           type="checkbox"
                           checked={selectedTeamMembers.includes(member.id)}
                           onChange={() => handleTeamMemberToggle(member.id)}
-                          className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                          className="app-checkbox"
                         />
                         <div className="ml-3 flex-1">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
