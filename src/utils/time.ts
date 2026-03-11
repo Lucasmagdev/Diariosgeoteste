@@ -50,3 +50,51 @@ export const formatTime24hOrEmpty = (value?: string | null): string => {
   const formatted = formatTime24h(value);
   return formatted === '-' ? '' : formatted;
 };
+
+export const maskTimeInput = (value?: string | null): string => {
+  const raw = String(value ?? '');
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+
+  if (!digits) return '';
+  if (digits.length <= 2) return digits;
+  if (digits.length === 3) return `${digits.slice(0, 1)}:${digits.slice(1)}`;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+};
+
+export const normalizeTimeInput = (value?: string | null): string => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+
+  if (/[AaPp][Mm]/.test(raw)) {
+    return formatTime24hOrEmpty(raw);
+  }
+
+  let hour = 0;
+  let minute = 0;
+
+  if (raw.includes(':')) {
+    const [h, m = '0'] = raw.split(':');
+    hour = Number(h);
+    minute = Number(m);
+  } else {
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    if (!digits) return '';
+    if (digits.length <= 2) {
+      hour = Number(digits);
+      minute = 0;
+    } else if (digits.length === 3) {
+      hour = Number(digits.slice(0, 1));
+      minute = Number(digits.slice(1));
+    } else {
+      hour = Number(digits.slice(0, 2));
+      minute = Number(digits.slice(2));
+    }
+  }
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return '';
+
+  const safeHour = Math.min(23, Math.max(0, hour));
+  const safeMinute = Math.min(59, Math.max(0, minute));
+
+  return `${String(safeHour).padStart(2, '0')}:${String(safeMinute).padStart(2, '0')}`;
+};

@@ -1,6 +1,7 @@
 import React from 'react';
 import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfTable } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
+import { ClientSignatureValue } from './ClientSignatureValue';
 import { formatTime24h } from '../../utils/time';
 
 interface PITDiaryViewProps {
@@ -71,7 +72,7 @@ export const PITDiaryView: React.FC<PITDiaryViewProps> = ({ diary, pitDetail = {
           label="Geoteste"
           value={<GeotestSignatureValue diary={diary} />}
         />
-        <PdfRow label="Cliente" placeholder />
+        <PdfRow label="Cliente" value={<ClientSignatureValue diary={diary} />} />
       </PdfSection>
     </PdfLayout>
   );

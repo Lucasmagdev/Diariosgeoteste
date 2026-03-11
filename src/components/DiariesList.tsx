@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Calendar, Clock, User, MapPin, FileText, Eye, Edit, Trash2, Download, FileSpreadsheet } from 'lucide-react';
+import { Search, Calendar, Clock, User, MapPin, FileText, Eye, Edit, Trash2, Download, FileSpreadsheet, Link2 } from 'lucide-react';
 import { WorkDiary } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -84,6 +84,39 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
   const [fichapdaDetail, setFichapdaDetail] = useState<any | null>(null);
   const [pdaDiarioDetail, setPdaDiarioDetail] = useState<any | null>(null);
   const [pdaDiarioPiles, setPdaDiarioPiles] = useState<any[]>([]);
+  const [creatingSignatureLink, setCreatingSignatureLink] = useState(false);
+  const [publicSignatureLink, setPublicSignatureLink] = useState('');
+
+  const callCreateSignatureLinkRpc = async (diaryId: string) => {
+    const attempts: Array<Record<string, any>> = [
+      { p_diary_id: diaryId, p_expires_hours: 168 },
+      { p_diary_id: diaryId },
+      { diary_id: diaryId, expires_hours: 168 },
+      { diary_id: diaryId },
+    ];
+
+    let lastError: any = null;
+
+    for (const params of attempts) {
+      const { data, error } = await supabase.rpc('create_diary_signature_link', params);
+      if (!error) {
+        return data;
+      }
+
+      lastError = error;
+      const msg = String(error?.message || '').toLowerCase();
+      const looksLikeSignatureMismatch =
+        msg.includes('could not find the function') ||
+        msg.includes('not found') ||
+        msg.includes('pgrst202');
+
+      if (!looksLikeSignatureMismatch) {
+        break;
+      }
+    }
+
+    throw lastError || new Error('Erro ao chamar create_diary_signature_link');
+  };
 
   const filteredDiaries = rows.filter((diary) => {
     const term = searchTerm.trim().toLowerCase();
@@ -356,6 +389,11 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             geotestSignatureImage: profile?.signature_image_url || r.geotest_signature_url || '',
             geotestCpf: getCpfFromProfileOrDiary(profile, r),
             responsibleSignature: r.responsible_signature,
+            responsibleSignatureImage: r.responsible_signature_url || '',
+            responsibleSignedAt: r.responsible_signed_at || '',
+            responsibleSignedBy: r.responsible_signed_by || '',
+            responsibleCpf: r.responsible_signed_cpf || '',
+            signatureStatus: r.signature_status || (r.responsible_signature_url ? 'signed' : 'pending'),
             observations: r.observations || '',
             createdBy: profile?.name || user.name || '',
             createdAt: r.created_at,
@@ -580,6 +618,51 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
     downloadCsv(fileName, [mapDiaryToCsvRow(selectedDiary)]);
   };
 
+  const handleCreateSignatureLink = async () => {
+    if (!selectedDiary) return;
+
+    if (!isSupabaseConfigured) {
+      toast.error('Supabase não está configurado.');
+      return;
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        toast.error('Sessão expirada. Faça login novamente para gerar o link.');
+        return;
+      }
+
+      setCreatingSignatureLink(true);
+      const data = await callCreateSignatureLinkRpc(selectedDiary.id);
+
+      const token = (data && typeof data === 'object' && 'token' in data) ? String((data as any).token || '') : '';
+      if (!token) throw new Error('Token de assinatura não retornado.');
+
+      const basePath = window.location.pathname || '/';
+      const link = `${window.location.origin}${basePath}?assinar=${encodeURIComponent(token)}`;
+      setPublicSignatureLink(link);
+
+      try {
+        await navigator.clipboard.writeText(link);
+        toast.success('Link de assinatura criado e copiado!');
+      } catch {
+        toast.success('Link de assinatura criado.');
+      }
+    } catch (err) {
+      console.error('Erro ao gerar link de assinatura:', err);
+      const msg = String((err as any)?.message || '').toLowerCase();
+      const isRpcMissing = msg.includes('404') || msg.includes('not found') || msg.includes('could not find function');
+      if (isRpcMissing) {
+        toast.error('Função RPC não encontrada. Execute o SQL create_public_diary_signature_links.sql no Supabase.');
+      } else {
+        toast.error('Não foi possível gerar o link de assinatura.');
+      }
+    } finally {
+      setCreatingSignatureLink(false);
+    }
+  };
+
   const handleDeleteClick = (diary: DiaryRow) => {
     setConfirmDialog({ isOpen: true, diary });
   };
@@ -675,6 +758,10 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
     // ou abrir modal de edição
   };
 
+  useEffect(() => {
+    setPublicSignatureLink('');
+  }, [selectedDiary?.id]);
+
   if (selectedDiary) {
     return (
       <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
@@ -687,6 +774,17 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             <span>Voltar à lista</span>
           </button>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            {(user?.role === 'admin' || user?.id === selectedDiary.clientId) && (
+              <button
+                onClick={handleCreateSignatureLink}
+                disabled={creatingSignatureLink}
+                className="bg-white border border-gray-300 text-gray-700 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Gerar link público para assinatura do cliente"
+              >
+                <Link2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>{creatingSignatureLink ? 'Gerando link...' : 'Link Assinatura'}</span>
+              </button>
+            )}
             <button
               onClick={handleExport}
               className="bg-green-600 text-white px-3 sm:px-4 lg:px-5 py-2 sm:py-2.5 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base"
@@ -703,6 +801,33 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             </button>
           </div>
         </div>
+
+        {publicSignatureLink && (
+          <div className="mb-3 sm:mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+            <p className="text-xs text-green-800 font-medium mb-1">Link público de assinatura:</p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <input
+                type="text"
+                readOnly
+                value={publicSignatureLink}
+                className="w-full text-xs sm:text-sm px-2 py-1.5 border border-green-200 rounded bg-white text-gray-700"
+              />
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(publicSignatureLink);
+                    toast.success('Link copiado!');
+                  } catch {
+                    toast.info('Não foi possível copiar automaticamente.');
+                  }
+                }}
+                className="px-3 py-1.5 text-xs sm:text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+              >
+                Copiar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Diary Details - Container responsivo */}
         <div ref={detailsRef} className="bg-transparent shadow-none border-0 rounded-none overflow-visible w-full">
@@ -881,6 +1006,15 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
                     )}
                     <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium rounded-full self-start hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors duration-200">
                       Finalizado
+                    </span>
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full self-start ${
+                        diary.signatureStatus === 'signed'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      }`}
+                    >
+                      {diary.signatureStatus === 'signed' ? 'Assinado cliente' : 'Pendente assinatura'}
                     </span>
                   </div>
                   

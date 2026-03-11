@@ -1,6 +1,7 @@
 import React from 'react';
 import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfTable } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
+import { ClientSignatureValue } from './ClientSignatureValue';
 import { formatTime24h } from '../../utils/time';
 
 interface PDADiaryViewProps {
@@ -97,7 +98,7 @@ export const PDADiaryView: React.FC<PDADiaryViewProps> = ({
           label="Geoteste"
           value={<GeotestSignatureValue diary={diary} />}
         />
-        <PdfRow label="Cliente" placeholder />
+        <PdfRow label="Cliente" value={<ClientSignatureValue diary={diary} />} />
       </PdfSection>
     </PdfLayout>
   );

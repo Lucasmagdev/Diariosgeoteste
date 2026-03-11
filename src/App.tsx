@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { LoginPage } from './components/LoginPage';
@@ -14,15 +14,26 @@ import { SplashScreen } from './components/SplashScreen';
 import { InstallPWA } from './components/InstallPWA';
 import { useIsPWA } from './hooks/useIsPWA';
 import { EquipmentMap } from './components/EquipmentMap';
+import { PublicDiarySignature } from './components/PublicDiarySignature';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showSplash, setShowSplash] = useState(true);
   const isPWA = useIsPWA();
+  const signatureToken = useMemo(
+    () => new URLSearchParams(window.location.search).get('assinar')?.trim() || '',
+    []
+  );
+  const isPublicSignaturePage = Boolean(signatureToken);
 
   // Mostrar splash screen apenas na primeira vez e se for PWA ou mobile
   useEffect(() => {
+    if (isPublicSignaturePage) {
+      setShowSplash(false);
+      return;
+    }
+
     const hasShownSplash = sessionStorage.getItem('hasShownSplash');
     const isMobile = window.innerWidth < 768;
     
@@ -35,7 +46,11 @@ const AppContent: React.FC = () => {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [isPWA]);
+  }, [isPWA, isPublicSignaturePage]);
+
+  if (isPublicSignaturePage) {
+    return <PublicDiarySignature token={signatureToken} />;
+  }
 
   if (showSplash) {
     return <SplashScreen />;

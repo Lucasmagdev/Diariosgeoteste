@@ -57,6 +57,11 @@ export interface WorkDiary {
   geotestSignatureImage?: string;
   geotestCpf?: string;
   responsibleSignature: string;
+  responsibleSignatureImage?: string;
+  responsibleSignedAt?: string;
+  responsibleSignedBy?: string;
+  responsibleCpf?: string;
+  signatureStatus?: 'pending' | 'signed';
   observations: string;
   createdBy: string;
   createdAt: string;

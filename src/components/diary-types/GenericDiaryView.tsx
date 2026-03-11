@@ -1,6 +1,7 @@
 import React from 'react';
 import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfValue } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
+import { ClientSignatureValue } from './ClientSignatureValue';
 import { formatTime24h } from '../../utils/time';
 
 interface GenericDiaryViewProps {
@@ -50,7 +51,7 @@ export const GenericDiaryView: React.FC<GenericDiaryViewProps> = ({ diary }) => 
           label="Geoteste"
           value={<GeotestSignatureValue diary={diary} />}
         />
-        <PdfRow label="Cliente" placeholder />
+        <PdfRow label="Cliente" value={<ClientSignatureValue diary={diary} />} />
       </PdfSection>
     </PdfLayout>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Edit, Check } from 'lucide-react';
+import { maskTimeInput, normalizeTimeInput } from '../utils/time';
 
 export interface PCEPile {
   estacaNome: string;
@@ -548,9 +549,13 @@ export const PCEForm: React.FC<PCEFormProps> = ({ value, onChange }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Horário da chegada</label>
               <input
-                type="time"
+                type="text"
+                inputMode="numeric"
+                placeholder="00:00"
+                maxLength={5}
                 value={value.abastecimento.horarioChegada}
-                onChange={(e) => setField((d) => { d.abastecimento.horarioChegada = e.target.value; })}
+                onChange={(e) => setField((d) => { d.abastecimento.horarioChegada = maskTimeInput(e.target.value); })}
+                onBlur={(e) => setField((d) => { d.abastecimento.horarioChegada = normalizeTimeInput(e.target.value); })}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>

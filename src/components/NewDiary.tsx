@@ -9,7 +9,7 @@ import { PDAForm, PDAFormData } from './PDAForm';
 import { PDADiaryForm, PDADiaryFormData } from './PDADiaryForm';
 import { ClientSelector } from './ClientSelector';
 import { getEstados, getCidadesByEstado, getEstadoById, getCidadeById } from '../data/estadosCidades';
-import { formatTime24hOrEmpty } from '../utils/time';
+import { formatTime24hOrEmpty, maskTimeInput, normalizeTimeInput } from '../utils/time';
 
 interface NewDiaryProps {
   onBack: () => void;
@@ -1001,9 +1001,13 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                 <div className="relative">
                   <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
-                    type="time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="00:00"
+                    maxLength={5}
                     value={formData.startTime}
-                    onChange={(e) => handleChange('startTime', e.target.value)}
+                    onChange={(e) => handleChange('startTime', maskTimeInput(e.target.value))}
+                    onBlur={(e) => handleChange('startTime', normalizeTimeInput(e.target.value))}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -1016,9 +1020,13 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                 <div className="relative">
                   <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
-                    type="time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="00:00"
+                    maxLength={5}
                     value={formData.endTime}
-                    onChange={(e) => handleChange('endTime', e.target.value)}
+                    onChange={(e) => handleChange('endTime', maskTimeInput(e.target.value))}
+                    onBlur={(e) => handleChange('endTime', normalizeTimeInput(e.target.value))}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -1557,9 +1565,13 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type="time"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="00:00"
+                      maxLength={5}
                       value={formData.startTime}
-                      onChange={(e) => handleChange('startTime', e.target.value)}
+                      onChange={(e) => handleChange('startTime', maskTimeInput(e.target.value))}
+                      onBlur={(e) => handleChange('startTime', normalizeTimeInput(e.target.value))}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       required
                     />
@@ -1573,9 +1585,13 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type="time"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="00:00"
+                      maxLength={5}
                       value={formData.endTime}
-                      onChange={(e) => handleChange('endTime', e.target.value)}
+                      onChange={(e) => handleChange('endTime', maskTimeInput(e.target.value))}
+                      onBlur={(e) => handleChange('endTime', normalizeTimeInput(e.target.value))}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       required
                     />
