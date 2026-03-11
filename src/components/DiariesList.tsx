@@ -7,6 +7,7 @@ import { exportElementToPDF } from '../utils/pdf';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { downloadCsv, mapDiaryToCsvRow } from '../utils/csv';
 import { downloadExcel, mapDiaryToExcelRow } from '../utils/excel';
+import { formatTime24h, formatTime24hOrEmpty } from '../utils/time';
 import { DiaryListSkeleton, Spinner } from './SkeletonLoader';
 import ConfirmDialog from './ConfirmDialog';
 import EmptyState from './EmptyState';
@@ -249,10 +250,6 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const formatTime = (time: string) => {
-    return time;
-  };
-
   const detailsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -352,8 +349,8 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             team: r.team,
             type: inferredType as any,
             date: r.date,
-            startTime: r.start_time,
-            endTime: r.end_time,
+            startTime: formatTime24hOrEmpty(r.start_time),
+            endTime: formatTime24hOrEmpty(r.end_time),
             servicesExecuted: r.services_executed,
             geotestSignature: r.geotest_signature,
             geotestSignatureImage: profile?.signature_image_url || r.geotest_signature_url || '',
@@ -894,7 +891,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
                     </span>
                     <span className="flex items-center">
                       <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                      {formatTime(diary.startTime)} - {formatTime(diary.endTime)}
+                      {formatTime24h(diary.startTime)} - {formatTime24h(diary.endTime)}
                     </span>
                     <span className="flex items-center">
                       <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />

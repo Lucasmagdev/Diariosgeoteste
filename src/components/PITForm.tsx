@@ -198,7 +198,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
                     {pile.estacaNome?.trim() || 'Nova Estaca'}
                   </p>
                   <div className="flex items-center gap-2">
-                    {!isEmpty && !isConfirmed && (
+                    {!isEmpty && (
                       <button
                         type="button"
                         onClick={() => confirmPile(index)}

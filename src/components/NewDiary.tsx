@@ -9,6 +9,7 @@ import { PDAForm, PDAFormData } from './PDAForm';
 import { PDADiaryForm, PDADiaryFormData } from './PDADiaryForm';
 import { ClientSelector } from './ClientSelector';
 import { getEstados, getCidadesByEstado, getEstadoById, getCidadeById } from '../data/estadosCidades';
+import { formatTime24hOrEmpty } from '../utils/time';
 
 interface NewDiaryProps {
   onBack: () => void;
@@ -27,6 +28,22 @@ interface Client {
   phone?: string;
   address?: string;
 }
+
+const normalizeClientsList = (rows: any[] = []): Client[] => {
+  return rows.map((row: any, index: number) => {
+    const rawName = typeof row?.name === 'string' ? row.name.trim() : '';
+    const rawEmail = typeof row?.email === 'string' ? row.email.trim() : '';
+    const fallbackName = rawName || rawEmail || 'Cliente sem nome';
+
+    return {
+      id: String(row?.id ?? `client-${index}`),
+      name: fallbackName,
+      email: rawEmail || undefined,
+      phone: typeof row?.phone === 'string' ? row.phone.trim() : undefined,
+      address: typeof row?.address === 'string' ? row.address.trim() : undefined,
+    };
+  });
+};
 
 export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
   const { user } = useAuth();
@@ -205,7 +222,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
           .order('name');
 
         if (!clientsError && clientsData) {
-          setClients(clientsData);
+          setClients(normalizeClientsList(clientsData as any[]));
         }
 
         // Buscar todos os usuários para formar a equipe
@@ -332,8 +349,8 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         } : null,
         team: getSelectedTeamNames() || formData.team.trim(), // Usar nomes selecionados ou fallback para input manual
         date: formData.date, // yyyy-mm-dd
-        start_time: formData.startTime,
-        end_time: formData.endTime,
+        start_time: formatTime24hOrEmpty(formData.startTime),
+        end_time: formatTime24hOrEmpty(formData.endTime),
         services_executed: formData.servicesExecuted.trim(),
         geotest_signature: user.name || null,
         geotest_signature_url: geotestSignatureImage || null,
@@ -926,7 +943,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                             .select('*')
                             .order('name');
                           if (!clientsError && clientsData) {
-                            setClients(clientsData);
+                            setClients(normalizeClientsList(clientsData as any[]));
                           }
                         } finally {
                           setLoadingClients(false);
@@ -1343,7 +1360,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                             .select('*')
                             .order('name');
                           if (!clientsError && clientsData) {
-                            setClients(clientsData);
+                            setClients(normalizeClientsList(clientsData as any[]));
                           }
                         } finally {
                           setLoadingClients(false);

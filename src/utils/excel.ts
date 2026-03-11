@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { formatTime24hOrEmpty } from './time';
 
 export type DiaryExcelRow = {
   Tipo?: string;
@@ -75,13 +76,13 @@ export function mapDiaryToExcelRow(d: {
     Endereco: d.address,
     Equipe: d.team,
     Data: new Date(d.date).toLocaleDateString('pt-BR'),
-    Inicio: d.startTime,
-    Termino: d.endTime,
+    Inicio: formatTime24hOrEmpty(d.startTime),
+    Termino: formatTime24hOrEmpty(d.endTime),
     'Serviços Executados': d.servicesExecuted,
     'Assinatura Geoteste': d.geotestSignature,
     'Assinatura Responsável': d.responsibleSignature,
     Observações: d.observations ?? '',
-    'Criado em': new Date(d.createdAt).toLocaleDateString('pt-BR') + ' ' + new Date(d.createdAt).toLocaleTimeString('pt-BR'),
+    'Criado em': new Date(d.createdAt).toLocaleDateString('pt-BR') + ' ' + new Date(d.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }),
   };
 
   // Adicionar dados específicos de PCE

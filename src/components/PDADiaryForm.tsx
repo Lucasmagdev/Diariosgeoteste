@@ -254,7 +254,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                         onChange={(e) => updateRow(idx, (p) => { p.nome = e.target.value; })}
                         className="w-40 sm:w-44 md:w-48 px-2 py-1.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                         placeholder="E-01"
-                        disabled={row.confirmado}
+                        disabled={isConfirmed && !isExpanded}
                       />
                     </td>
                     <td className="py-2 px-3">
@@ -264,7 +264,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                         onChange={(e) => updateRow(idx, (p) => { p.tipo = e.target.value; })}
                         className="w-36 sm:w-40 md:w-44 px-2 py-1.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                         placeholder="Pré-moldada"
-                        disabled={row.confirmado}
+                        disabled={isConfirmed && !isExpanded}
                       />
                     </td>
                     <td className="py-2 px-3">
@@ -275,7 +275,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                         onChange={(e) => updateRow(idx, (p) => { p.diametroCm = e.target.value; })}
                         className="w-28 px-2 py-1.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                         placeholder="50"
-                        disabled={row.confirmado}
+                        disabled={isConfirmed && !isExpanded}
                       />
                     </td>
                     <td className="py-2 px-3">
@@ -286,7 +286,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                         onChange={(e) => updateRow(idx, (p) => { p.profundidadeM = e.target.value; })}
                         className="w-28 px-2 py-1.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                         placeholder="12.5"
-                        disabled={row.confirmado}
+                        disabled={isConfirmed && !isExpanded}
                       />
                     </td>
                     <td className="py-2 px-3">
@@ -297,7 +297,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                         onChange={(e) => updateRow(idx, (p) => { p.cargaTrabalhoTf = e.target.value; })}
                         className="w-28 px-2 py-1.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                         placeholder="40"
-                        disabled={row.confirmado}
+                        disabled={isConfirmed && !isExpanded}
                       />
                     </td>
                     <td className="py-2 px-3">
@@ -313,7 +313,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                     </td>
                     <td className="py-2 pl-3">
                       <div className="flex items-center gap-2">
-                        {!isEmpty && !isConfirmed && (
+                        {!isEmpty && (
                           <button
                             type="button"
                             onClick={() => confirmRow(idx)}
@@ -397,7 +397,7 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
                       {row.nome || 'Nova Estaca'}
                     </span>
                     <div className="flex items-center gap-2">
-                      {!isEmpty && !isConfirmed && (
+                      {!isEmpty && (
                         <button
                           type="button"
                           onClick={() => confirmRow(idx)}

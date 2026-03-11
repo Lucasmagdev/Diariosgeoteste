@@ -24,10 +24,17 @@ interface PdfValueProps {
   checked?: boolean;
 }
 
+interface PdfClimateRowProps {
+  ensolarado?: boolean;
+  chuvaFraca?: boolean;
+  chuvaForte?: boolean;
+}
+
 interface PdfTableProps {
   headers: string[];
   rows: Array<Array<React.ReactNode>>;
   columnWidths?: string;
+  compactHeaders?: boolean;
 }
 
 export const PdfLayout: React.FC<PdfLayoutProps> = ({ diary, title, children }) => {
@@ -84,7 +91,7 @@ export const PdfRow: React.FC<PdfRowProps> = ({ label, value = '-', span = 1, pl
   const gridSpan = `span ${span} / span ${span}`;
   const labelStr = typeof label === 'string' ? label.toUpperCase() : '';
   const isEquipamento = labelStr.includes('EQUIPAMENTO');
-  const labelTextClasses = isEquipamento 
+  const labelTextClasses = isEquipamento
     ? 'text-[7px] whitespace-nowrap'
     : 'text-[7px] break-words';
   const containerClasses = isEquipamento
@@ -105,90 +112,92 @@ export const PdfRow: React.FC<PdfRowProps> = ({ label, value = '-', span = 1, pl
 
 export const PdfValue: React.FC<PdfValueProps> = ({ label, checked }) => {
   return (
-    <span style={{ 
-      display: 'inline-block',
-      height: '7px',
-      lineHeight: '7px',
-      verticalAlign: 'top'
-    }}>
-      <span 
-        style={{ 
-          width: '5.5px', 
-          height: '5.5px', 
-          border: '0.5px solid #374151',
-          display: 'inline-block',
-          verticalAlign: 'top',
-          marginRight: '3px',
-          marginTop: '0.75px',
-          backgroundColor: '#ffffff',
-          position: 'relative'
-        }}
-      >
-        {checked && (
-          <span style={{ 
-            width: '2.5px', 
-            height: '2.5px', 
-            backgroundColor: '#1f2937',
-            display: 'block',
-            position: 'absolute',
-            top: '1.25px',
-            left: '1.25px'
-          }}></span>
-        )}
+    <span className="inline-flex items-center gap-1 align-middle leading-none">
+      <span className="inline-flex h-[7px] w-[7px] items-center justify-center border border-gray-700 bg-white">
+        {checked ? <span className="h-[3px] w-[3px] bg-gray-800"></span> : null}
       </span>
-      <span 
-        style={{ 
-          fontSize: '7px',
-          lineHeight: '0px',
-          verticalAlign: 'top',
-          display: 'inline-block',
-          height: '7px',
-          paddingTop: '0px',
-          marginTop: '0px'
-        }}
-      >
-        {label}
-      </span>
+      <span className="text-[7px] leading-none">{label}</span>
     </span>
   );
 };
 
-export const PdfTable: React.FC<PdfTableProps> = ({ headers, rows, columnWidths }) => {
-  // Larguras padrão baseadas no número de colunas para evitar sobreposição
-  // Em mobile, usa minmax(0, 1fr) para garantir que não ultrapasse a largura disponível
+const PdfCheckItem: React.FC<{ label: string; checked?: boolean }> = ({ label, checked }) => (
+  <div className="flex h-[10px] items-center gap-1 whitespace-nowrap">
+    <span className="inline-flex h-[7px] w-[7px] shrink-0 items-center justify-center border border-gray-700 bg-white">
+      {checked ? <span className="h-[3px] w-[3px] bg-gray-800"></span> : null}
+    </span>
+    <span className="text-[7px] leading-[7px]" style={{ transform: 'translateY(-0.5px)' }}>
+      {label}
+    </span>
+  </div>
+);
+
+export const PdfClimateRow: React.FC<PdfClimateRowProps> = ({
+  ensolarado,
+  chuvaFraca,
+  chuvaForte,
+}) => (
+  <div className="grid grid-cols-3 gap-1 px-0.5 py-0.5">
+    <PdfCheckItem label="Ensolarado" checked={ensolarado} />
+    <PdfCheckItem label="Chuva fraca" checked={chuvaFraca} />
+    <PdfCheckItem label="Chuva forte" checked={chuvaForte} />
+  </div>
+);
+
+export const PdfTable: React.FC<PdfTableProps> = ({
+  headers,
+  rows,
+  columnWidths,
+  compactHeaders = false,
+}) => {
+  const normalizeHeader = (value: string): string =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .trim();
+
+  const formatHeaderLabel = (header: string): string => {
+    if (!compactHeaders) return header;
+
+    const normalized = normalizeHeader(header);
+
+    if (normalized === 'DIAMETRO (CM)') return 'Diam. (cm)';
+    if (normalized === 'PROFUNDIDADE (METROS)') return 'Prof. (m)';
+    if (normalized === 'PROFUNDIDADE (CM)') return 'Prof. (cm)';
+    if (normalized === 'CARGA DE TRABALHO (TF)') return 'Carga trab. (tf)';
+    if (normalized === 'CARGA DE ENSAIO (TF)') return 'Carga ensaio (tf)';
+    if (normalized === 'COMPRIMENTO UTIL (M)') return 'Comp. util (m)';
+
+    return header;
+  };
+
   const getDefaultWidths = (numCols: number) => {
-    // Para mobile: usar minmax(0, 1fr) para evitar overflow
-    // Isso garante que as colunas se ajustem proporcionalmente sem ultrapassar o container
     return `repeat(${numCols}, minmax(0, 1fr))`;
   };
-  
-  // Função para determinar o tamanho da fonte baseado no comprimento do título
-  // Títulos longos que tendem a quebrar recebem fonte menor
+
   const getHeaderFontSize = (header: string): string => {
     const headerLength = header.length;
-    // Lista de padrões de títulos que tendem a quebrar (com parênteses, unidades, etc)
     const longTitlePatterns = [
       'ARRASAMENTO',
       'PROFUNDIDADE',
       'COMPRIMENTO',
-      'DIÂMETRO',
+      'DIAMETRO',
       'CARGA',
       'TRABALHO',
       'ENSAIO'
     ];
-    
+
     const hasLongPattern = longTitlePatterns.some(pattern => header.includes(pattern));
-    
-    // Se o título tem mais de 13 caracteres OU contém padrões longos, reduz o tamanho da fonte
-    // Isso previne quebras de linha desnecessárias
+
     if (headerLength > 13 || hasLongPattern) {
-      return 'text-[6px]'; // Fonte menor para títulos longos
+      return 'text-[6px]';
     }
-    return 'text-[7px]'; // Fonte padrão
+    return 'text-[7px]';
   };
-  
+
   const template = columnWidths || getDefaultWidths(headers.length);
-  
+
   return (
     <div className="border border-gray-300 overflow-x-auto w-full">
       <div className="w-full">
@@ -197,18 +206,19 @@ export const PdfTable: React.FC<PdfTableProps> = ({ headers, rows, columnWidths 
           style={{ gridTemplateColumns: template, minWidth: 0 }}
         >
           {headers.map((header, idx) => {
-            const headerStr = typeof header === 'string' ? header.toUpperCase() : '';
+            const headerLabel = formatHeaderLabel(typeof header === 'string' ? header : String(header));
+            const headerStr = normalizeHeader(headerLabel);
             const isEquipamento = headerStr.includes('EQUIPAMENTO');
             const fontSize = getHeaderFontSize(headerStr);
             const headerClasses = isEquipamento
-              ? `whitespace-nowrap leading-tight ${fontSize}`
-              : `break-words whitespace-normal leading-tight ${fontSize}`;
+              ? `whitespace-nowrap leading-snug ${fontSize}`
+              : `break-words whitespace-normal leading-snug ${fontSize}`;
             const headerContainerClasses = isEquipamento
-              ? 'pl-0.5 pr-0.5 py-0.5 border-r border-gray-300 last:border-r-0 text-center min-w-0 overflow-hidden'
-              : 'px-0.5 py-0.5 border-r border-gray-300 last:border-r-0 text-center min-w-0 overflow-hidden';
+              ? 'pl-0.5 pr-0.5 py-1 border-r border-gray-300 last:border-r-0 text-center min-w-0 min-h-[20px]'
+              : 'px-0.5 py-1 border-r border-gray-300 last:border-r-0 text-center min-w-0 min-h-[20px]';
             return (
               <div key={idx} className={headerContainerClasses}>
-                <div className={headerClasses}>{header}</div>
+                <div className={`${headerClasses} w-full`}>{headerLabel}</div>
               </div>
             );
           })}

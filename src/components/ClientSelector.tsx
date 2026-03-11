@@ -3,10 +3,10 @@ import { Search, ChevronDown, Building2 } from 'lucide-react';
 
 interface Client {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
 }
 
 interface ClientSelectorProps {
@@ -48,36 +48,40 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const normalizeText = (value?: string | null) => (typeof value === 'string' ? value.trim() : '');
+
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setIsOpen(true);
+    const normalizedTerm = term.trim().toLowerCase();
 
-    if (!term.trim()) {
+    if (!normalizedTerm) {
       setFilteredClients(clients);
       onChange('');
       return;
     }
 
     const filtered = clients.filter((client) =>
-      client.name.toLowerCase().includes(term.toLowerCase()) ||
-      client.email.toLowerCase().includes(term.toLowerCase())
+      normalizeText(client.name).toLowerCase().includes(normalizedTerm) ||
+      normalizeText(client.email).toLowerCase().includes(normalizedTerm)
     );
     setFilteredClients(filtered);
 
     // Se o termo digitado corresponde exatamente a um cliente, seleciona
     const exactMatch = clients.find(
-      (client) => client.name.toLowerCase() === term.toLowerCase()
+      (client) => normalizeText(client.name).toLowerCase() === normalizedTerm
     );
     if (exactMatch) {
-      onChange(exactMatch.name);
+      onChange(normalizeText(exactMatch.name));
     } else {
       onChange('');
     }
   };
 
   const handleSelect = (client: Client) => {
-    setSearchTerm(client.name);
-    onChange(client.name);
+    const selectedName = normalizeText(client.name);
+    setSearchTerm(selectedName);
+    onChange(selectedName);
     setIsOpen(false);
   };
 
@@ -131,10 +135,10 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                     <Building2 className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {client.name}
+                        {normalizeText(client.name) || 'Cliente sem nome'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {client.email}
+                        {normalizeText(client.email) || '-'}
                       </p>
                     </div>
                   </button>

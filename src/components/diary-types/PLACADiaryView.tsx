@@ -1,6 +1,7 @@
 import React from 'react';
-import { PdfLayout, PdfRow, PdfSection, PdfTable, PdfValue } from './PdfLayout';
+import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfTable } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
+import { formatTime24h } from '../../utils/time';
 
 interface PLACADiaryViewProps {
   diary: any;
@@ -15,8 +16,8 @@ export const PLACADiaryView: React.FC<PLACADiaryViewProps> = ({ diary, placaDeta
     <PdfLayout diary={diary} title="DIÁRIO DE OBRA • PLACA">
       <PdfSection columns={5} title="Identificação">
         <PdfRow label="Equipamento" value={placaDetail.equipamentos_equipamento_reacao || 'PLACA'} />
-        <PdfRow label="Início" value={diary.startTime || '-'} />
-        <PdfRow label="Término" value={diary.endTime || '-'} />
+        <PdfRow label="Início" value={formatTime24h(diary.startTime)} />
+        <PdfRow label="Término" value={formatTime24h(diary.endTime)} />
         <PdfRow label="Equipe" value={diary.team} span={2} />
         <PdfRow label="Endereço" value={diary.address} span={5} />
       </PdfSection>
@@ -25,11 +26,11 @@ export const PLACADiaryView: React.FC<PLACADiaryViewProps> = ({ diary, placaDeta
         <div className="bg-gray-200 border-b border-gray-400 px-0.5 py-0.5 font-bold uppercase text-[6px] flex items-center">
           Clima
         </div>
-        <div className="px-0.5 py-1 flex items-center gap-4 text-[7px]">
-          <PdfValue label="Ensolarado" checked={!!diary?.weather_ensolarado} />
-          <PdfValue label="Chuva fraca" checked={!!diary?.weather_chuva_fraca} />
-          <PdfValue label="Chuva forte" checked={!!diary?.weather_chuva_forte} />
-        </div>
+        <PdfClimateRow
+          ensolarado={!!diary?.weather_ensolarado}
+          chuvaFraca={!!diary?.weather_chuva_fraca}
+          chuvaForte={!!diary?.weather_chuva_forte}
+        />
       </section>
 
       <PdfSection columns={4} title="Equipamentos">

@@ -1,6 +1,7 @@
 import React from 'react';
-import { PdfLayout, PdfRow, PdfSection, PdfTable, PdfValue } from './PdfLayout';
+import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfTable } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
+import { formatTime24h } from '../../utils/time';
 
 interface PITDiaryViewProps {
   diary: any;
@@ -8,15 +9,13 @@ interface PITDiaryViewProps {
   pitPiles: any[];
 }
 
-const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString('pt-BR') : '');
-
 export const PITDiaryView: React.FC<PITDiaryViewProps> = ({ diary, pitDetail = {}, pitPiles = [] }) => {
   return (
     <PdfLayout diary={diary} title="DIÁRIO DE OBRA • PIT">
       <PdfSection columns={5} title="Identificação">
         <PdfRow label="Equipamento" value={pitDetail.equipamento || 'PIT'} />
-        <PdfRow label="Início" value={diary.startTime || '-'} />
-        <PdfRow label="Término" value={diary.endTime || '-'} />
+        <PdfRow label="Início" value={formatTime24h(diary.startTime)} />
+        <PdfRow label="Término" value={formatTime24h(diary.endTime)} />
         <PdfRow label="Equipe" value={diary.team} span={2} />
         <PdfRow label="Endereço" value={diary.address} span={5} />
       </PdfSection>
@@ -25,11 +24,11 @@ export const PITDiaryView: React.FC<PITDiaryViewProps> = ({ diary, pitDetail = {
         <div className="bg-gray-200 border-b border-gray-400 px-0.5 py-0.5 font-bold uppercase text-[6px] flex items-center">
           Clima
         </div>
-        <div className="px-0.5 py-1 flex items-center gap-4 text-[7px]" style={{ alignItems: 'center', display: 'flex' }}>
-          <PdfValue label="Ensolarado" checked={!!diary?.weather_ensolarado} />
-          <PdfValue label="Chuva fraca" checked={!!diary?.weather_chuva_fraca} />
-          <PdfValue label="Chuva forte" checked={!!diary?.weather_chuva_forte} />
-        </div>
+        <PdfClimateRow
+          ensolarado={!!diary?.weather_ensolarado}
+          chuvaFraca={!!diary?.weather_chuva_fraca}
+          chuvaForte={!!diary?.weather_chuva_forte}
+        />
       </section>
 
       <PdfSection columns={4} title="Dados do ensaio">
@@ -53,6 +52,8 @@ export const PITDiaryView: React.FC<PITDiaryViewProps> = ({ diary, pitDetail = {
               'Arrasamento (m)',
               'Comprimento útil (m)',
             ]}
+            columnWidths="0.9fr 0.9fr 1fr 1fr 1fr 1.2fr"
+            compactHeaders
             rows={pitPiles.map((pile) => [
               pile.estaca_nome || '-',
               pile.estaca_tipo || '-',

@@ -1,3 +1,5 @@
+import { formatTime24hOrEmpty } from './time';
+
 export type DiaryCsvRow = {
   Tipo?: string;
   Cliente: string;
@@ -61,8 +63,8 @@ export function mapDiaryToCsvRow(d: {
     Endereco: d.address,
     Equipe: d.team,
     Data: d.date,
-    Inicio: d.startTime,
-    Termino: d.endTime,
+    Inicio: formatTime24hOrEmpty(d.startTime),
+    Termino: formatTime24hOrEmpty(d.endTime),
     ServicosExecutados: d.servicesExecuted,
     AssinaturaGeoteste: d.geotestSignature,
     AssinaturaResponsavel: d.responsibleSignature,

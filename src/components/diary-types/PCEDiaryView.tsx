@@ -1,6 +1,7 @@
 import React from 'react';
-import { PdfLayout, PdfRow, PdfSection, PdfTable, PdfValue } from './PdfLayout';
+import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfTable, PdfValue } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
+import { formatTime24h } from '../../utils/time';
 
 interface PCEDiaryViewProps {
   diary: any;
@@ -8,25 +9,13 @@ interface PCEDiaryViewProps {
   pcePiles: any[];
 }
 
-const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString('pt-BR') : '');
-
-const formatTime = (value?: string) => {
-  if (!value) return '-';
-  // Se vier no formato "HH:MM:SS", pegar apenas "HH:MM"
-  if (value.includes(':')) {
-    const parts = value.split(':');
-    return `${parts[0]}:${parts[1]}`;
-  }
-  return value;
-};
-
 export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {}, pcePiles = [] }) => {
   return (
     <PdfLayout diary={diary} title="DIÁRIO DE OBRA • PCE">
       <PdfSection columns={5} title="Identificação">
         <PdfRow label="Equipamento" value={pceDetail.cravacao_equipamento || 'PCE'} />
-        <PdfRow label="Início" value={diary.startTime || '-'} />
-        <PdfRow label="Término" value={diary.endTime || '-'} />
+        <PdfRow label="Início" value={formatTime24h(diary.startTime)} />
+        <PdfRow label="Término" value={formatTime24h(diary.endTime)} />
         <PdfRow label="Equipe" value={diary.team} span={2} />
         <PdfRow label="Endereço" value={diary.address} span={5} />
       </PdfSection>
@@ -35,11 +24,11 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
         <div className="bg-gray-200 border-b border-gray-400 px-0.5 py-0.5 font-bold uppercase text-[6px] flex items-center">
           Clima
         </div>
-        <div className="px-0.5 py-1 flex items-center gap-4 text-[7px]">
-          <PdfValue label="Ensolarado" checked={!!diary?.weather_ensolarado} />
-          <PdfValue label="Chuva fraca" checked={!!diary?.weather_chuva_fraca} />
-          <PdfValue label="Chuva forte" checked={!!diary?.weather_chuva_forte} />
-        </div>
+        <PdfClimateRow
+          ensolarado={!!diary?.weather_ensolarado}
+          chuvaFraca={!!diary?.weather_chuva_fraca}
+          chuvaForte={!!diary?.weather_chuva_forte}
+        />
       </section>
 
       <PdfSection columns={4} title="Dados do ensaio">
@@ -50,9 +39,9 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
           span={2}
         />
         <PdfRow label="Macaco" value={pceDetail.equipamentos_macaco || '-'} />
-        <PdfRow 
-          label={pceDetail.ensaio_tipo === 'PCE HELICOIDAL' ? 'Célula de carga' : 'Célula'} 
-          value={pceDetail.equipamentos_celula || '-'} 
+        <PdfRow
+          label={pceDetail.ensaio_tipo === 'PCE HELICOIDAL' ? 'Célula de carga' : 'Célula'}
+          value={pceDetail.equipamentos_celula || '-'}
         />
         <PdfRow label="Manômetro" value={pceDetail.equipamentos_manometro || '-'} />
         <PdfRow label="Relógios" value={pceDetail.equipamentos_relogios || '-'} />
@@ -83,6 +72,8 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
                     'Diâmetro (cm)',
                   ]
             }
+            columnWidths={pceDetail.ensaio_tipo === 'PCE HELICOIDAL' ? '0.9fr 0.9fr 1.2fr 1.2fr 1.2fr 1fr' : '1fr 0.9fr 1.3fr 1fr 1fr'}
+            compactHeaders
             rows={pcePiles.map((pile) => {
               if (pceDetail.ensaio_tipo === 'PCE HELICOIDAL') {
                 return [
@@ -93,15 +84,15 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
                   pile.estaca_carga_ensaio_tf || '-',
                   pile.estaca_diametro_cm || '-',
                 ];
-              } else {
-                return [
-                  pile.estaca_nome || '-',
-                  pile.estaca_tipo || '-',
-                  pile.estaca_profundidade_m || '-',
-                  pile.estaca_carga_trabalho_tf || '-',
-                  pile.estaca_diametro_cm || '-',
-                ];
               }
+
+              return [
+                pile.estaca_nome || '-',
+                pile.estaca_tipo || '-',
+                pile.estaca_profundidade_m || '-',
+                pile.estaca_carga_trabalho_tf || '-',
+                pile.estaca_diametro_cm || '-',
+              ];
             })}
           />
         </div>
@@ -111,7 +102,6 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
         <PdfRow label="Descrição" value={pceDetail.ocorrencias || diary.observations || '-'} span={3} />
       </PdfSection>
 
-      {/* Equipamento de cravação - Apenas para PCE HELICOIDAL */}
       {pceDetail.ensaio_tipo === 'PCE HELICOIDAL' && (
         <PdfSection columns={3} title="Cravação">
           <PdfRow label="Equipamento" value={pceDetail.cravacao_equipamento || '-'} span={2} />
@@ -119,7 +109,6 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
         </PdfSection>
       )}
 
-      {/* Abastecimento - Apenas para PCE HELICOIDAL */}
       {pceDetail.ensaio_tipo === 'PCE HELICOIDAL' && (
         <PdfSection columns={4} title="Abastecimento">
           <PdfRow label="Mobilização Tanque (L)" value={pceDetail.abastecimento_mobilizacao_litros_tanque ?? '-'} />
@@ -138,7 +127,7 @@ export const PCEDiaryView: React.FC<PCEDiaryViewProps> = ({ diary, pceDetail = {
           />
           <PdfRow label="Fornecido por" value={pceDetail.abastecimento_fornecido_por || '-'} />
           <PdfRow label="Quantidade (L)" value={pceDetail.abastecimento_quantidade_litros ?? '-'} />
-          <PdfRow label="Horário" value={formatTime(pceDetail.abastecimento_horario_chegada)} />
+          <PdfRow label="Horário" value={formatTime24h(pceDetail.abastecimento_horario_chegada)} />
         </PdfSection>
       )}
 
