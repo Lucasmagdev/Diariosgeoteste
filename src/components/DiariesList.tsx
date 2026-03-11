@@ -54,6 +54,28 @@ const getCpfFromProfileOrDiary = (profile: any, diaryRow: any): string => {
   return typeof rawCpf === 'string' ? rawCpf.trim() : '';
 };
 
+const buildPublicSignatureLink = (token: string): string => {
+  const configuredPublicUrl = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();
+
+  let url: URL | null = null;
+
+  if (configuredPublicUrl) {
+    try {
+      url = new URL(configuredPublicUrl);
+    } catch {
+      console.warn('VITE_PUBLIC_APP_URL inválida, usando URL atual da aplicação.');
+    }
+  }
+
+  if (!url) {
+    const baseUrl = (import.meta.env.BASE_URL as string | undefined) || '/';
+    url = new URL(baseUrl, window.location.origin);
+  }
+
+  url.searchParams.set('assinar', token);
+  return url.toString();
+};
+
 export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
   const { user } = useAuth();
   const toast = useToast();
@@ -639,8 +661,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
       const token = (data && typeof data === 'object' && 'token' in data) ? String((data as any).token || '') : '';
       if (!token) throw new Error('Token de assinatura não retornado.');
 
-      const basePath = window.location.pathname || '/';
-      const link = `${window.location.origin}${basePath}?assinar=${encodeURIComponent(token)}`;
+      const link = buildPublicSignatureLink(token);
       setPublicSignatureLink(link);
 
       try {
@@ -648,6 +669,10 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
         toast.success('Link de assinatura criado e copiado!');
       } catch {
         toast.success('Link de assinatura criado.');
+      }
+
+      if (link.includes('localhost') || link.includes('127.0.0.1')) {
+        toast.warning('Link gerado em localhost. Defina VITE_PUBLIC_APP_URL com seu domínio público.');
       }
     } catch (err) {
       console.error('Erro ao gerar link de assinatura:', err);
