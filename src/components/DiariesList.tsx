@@ -3,7 +3,8 @@ import { Search, Calendar, Clock, User, MapPin, FileText, Eye, Edit, Trash2, Dow
 import { WorkDiary } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { generateDiaryPdf } from '../utils/diaryPdf';
+import { generateDiaryPdf, diaryPdfBlobUrl } from '../utils/diaryPdf';
+import { DiaryPdfPreview } from './DiaryPdfPreview';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { downloadCsv, mapDiaryToCsvRow } from '../utils/csv';
 import { downloadExcel, mapDiaryToExcelRow } from '../utils/excel';
@@ -12,7 +13,6 @@ import { DiaryListSkeleton, Spinner } from './SkeletonLoader';
 import ConfirmDialog from './ConfirmDialog';
 import EmptyState from './EmptyState';
 import Pagination from './Pagination';
-import { DiaryPDFLayout } from './DiaryPDFLayout';
 
 // Tipagem local para exibição
 type DiaryRow = WorkDiary;
@@ -106,6 +106,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
   const [fichapdaDetail, setFichapdaDetail] = useState<any | null>(null);
   const [pdaDiarioDetail, setPdaDiarioDetail] = useState<any | null>(null);
   const [pdaDiarioPiles, setPdaDiarioPiles] = useState<any[]>([]);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const [creatingSignatureLink, setCreatingSignatureLink] = useState(false);
   const [publicSignatureLink, setPublicSignatureLink] = useState('');
 
@@ -623,6 +624,50 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
     fetchDetail();
   }, [selectedDiary]);
 
+  // Gera o PDF vetorial e o exibe na tela (mesmo arquivo do "Exportar PDF").
+  // Gera UMA vez, só depois que os detalhes terminarem de carregar, para não piscar.
+  useEffect(() => {
+    if (!selectedDiary) {
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return '';
+      });
+      return;
+    }
+    if (loadingDetail) return; // espera os detalhes carregarem
+    let active = true;
+    (async () => {
+      try {
+        const url = await diaryPdfBlobUrl({
+          diary: selectedDiary,
+          pceDetail,
+          pcePiles,
+          pitDetail,
+          pitPiles,
+          placaDetail,
+          placaPiles,
+          fichapdaDetail,
+          pdaDiarioDetail,
+          pdaDiarioPiles,
+        });
+        if (!active) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      } catch {
+        /* mantém a pré-visualização anterior em caso de erro */
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDiary, loadingDetail]);
+
   const handleExport = async () => {
     if (!selectedDiary) return;
     const safeClient = selectedDiary.clientName.replace(/[^a-z0-9\-\_\s]/gi, '').replace(/\s+/g, '-');
@@ -865,20 +910,17 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
           </div>
         )}
 
-        {/* Diary Details - Container responsivo */}
-        <div ref={detailsRef} className="bg-transparent shadow-none border-0 rounded-none overflow-visible w-full">
-          <DiaryPDFLayout
-            diary={selectedDiary}
-            pceDetail={pceDetail}
-            pcePiles={pcePiles}
-            pitDetail={pitDetail}
-            pitPiles={pitPiles}
-            placaDetail={placaDetail}
-            placaPiles={placaPiles}
-            fichapdaDetail={fichapdaDetail}
-            pdaDiarioDetail={pdaDiarioDetail}
-            pdaDiarioPiles={pdaDiarioPiles}
-          />
+        {/* Pré-visualização: mesmo PDF vetorial do "Exportar PDF", renderizado responsivo */}
+        <div ref={detailsRef} className="w-full">
+          <div className="w-full max-h-[70vh] sm:max-h-[80vh] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800 p-2 sm:p-3">
+            {previewUrl ? (
+              <DiaryPdfPreview url={previewUrl} />
+            ) : (
+              <div className="flex items-center justify-center py-16 text-sm text-gray-500 dark:text-gray-400">
+                Gerando pré-visualização...
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );

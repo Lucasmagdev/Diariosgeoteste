@@ -95,7 +95,7 @@ const formatDateBR = (value?: string) => {
 };
 
 // ---------------------------------------------------------------- principal
-export async function generateDiaryPdf(data: DiaryPdfData, fileName: string): Promise<void> {
+async function buildDiaryDoc(data: DiaryPdfData): Promise<jsPDF> {
   const {
     diary,
     pceDetail,
@@ -675,5 +675,17 @@ export async function generateDiaryPdf(data: DiaryPdfData, fileName: string): Pr
 
   signatures();
   drawFooter();
+  return doc;
+}
+
+/** Gera e baixa o PDF do diário. */
+export async function generateDiaryPdf(data: DiaryPdfData, fileName: string): Promise<void> {
+  const doc = await buildDiaryDoc(data);
   doc.save(fileName);
+}
+
+/** Gera o PDF e retorna uma URL de blob para visualização (iframe/embed). */
+export async function diaryPdfBlobUrl(data: DiaryPdfData): Promise<string> {
+  const doc = await buildDiaryDoc(data);
+  return doc.output('bloburl') as unknown as string;
 }
