@@ -10,6 +10,7 @@ import { ClientsManagement } from './components/ClientsManagement';
 import { UsersManagement } from './components/UsersManagement';
 import { ProfilePage } from './components/ProfilePage';
 import { AgentAssistant } from './components/AgentAssistant';
+import { DiaryHelp } from './components/DiaryHelp';
 import { SplashScreen } from './components/SplashScreen';
 import { InstallPWA } from './components/InstallPWA';
 import { useIsPWA } from './hooks/useIsPWA';
@@ -96,6 +97,7 @@ const AppContent: React.FC = () => {
     <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
       {renderPage()}
       <AgentAssistant />
+      <DiaryHelp />
       <InstallPWA />
     </Layout>
   );

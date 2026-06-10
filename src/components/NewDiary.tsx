@@ -722,6 +722,9 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
 
   const hasAnyString = (value: any): boolean => {
     if (!value) return false;
+    // Booleanos são apenas controle de UI (isExpanded) ou confirmação (confirmado),
+    // não contam como conteúdo preenchido.
+    if (typeof value === 'boolean') return false;
     if (typeof value === 'string') return value.trim() !== '';
     if (Array.isArray(value)) {
       return value.some((item) => hasAnyString(item));

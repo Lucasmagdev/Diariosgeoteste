@@ -1,21 +1,13 @@
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
-function getApiKey(): string {
-  const key = (import.meta as any).env.VITE_GROQ_API_KEY as string | undefined;
-  if (!key) throw new Error('Chave da API não configurada. Verifique as configurações do sistema.');
-  return key;
-}
-
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_URL = '/.netlify/functions/groq';
 const DEFAULT_MODEL = 'llama-3.1-8b-instant';
 
 export async function chatComplete(messages: ChatMessage[], options?: { model?: string; temperature?: number; maxTokens?: number }): Promise<string> {
-  const apiKey = getApiKey();
   const resp = await fetch(GROQ_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: options?.model ?? DEFAULT_MODEL,

@@ -3,7 +3,7 @@ import { Search, Calendar, Clock, User, MapPin, FileText, Eye, Edit, Trash2, Dow
 import { WorkDiary } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { exportElementToPDF } from '../utils/pdf';
+import { generateDiaryPdf } from '../utils/diaryPdf';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { downloadCsv, mapDiaryToCsvRow } from '../utils/csv';
 import { downloadExcel, mapDiaryToExcelRow } from '../utils/excel';
@@ -417,6 +417,9 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             responsibleCpf: r.responsible_signed_cpf || '',
             signatureStatus: r.signature_status || (r.responsible_signature_url ? 'signed' : 'pending'),
             observations: r.observations || '',
+            weather_ensolarado: !!r.weather_ensolarado,
+            weather_chuva_fraca: !!r.weather_chuva_fraca,
+            weather_chuva_forte: !!r.weather_chuva_forte,
             createdBy: profile?.name || user.name || '',
             createdAt: r.created_at,
           };
@@ -621,16 +624,24 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
   }, [selectedDiary]);
 
   const handleExport = async () => {
-    if (!detailsRef.current || !selectedDiary) return;
+    if (!selectedDiary) return;
     const safeClient = selectedDiary.clientName.replace(/[^a-z0-9\-\_\s]/gi, '').replace(/\s+/g, '-');
     const fileName = `diario-${safeClient}-${selectedDiary.date}.pdf`;
-    await exportElementToPDF(detailsRef.current, fileName, {
-      title: `Diário de Obra • ${selectedDiary.clientName}`,
-      logoUrl: '/logogeoteste.png',
-      headerBgColor: '#ECFDF5',
-      marginMm: 12,
-      showHeader: false,
-    });
+    await generateDiaryPdf(
+      {
+        diary: selectedDiary,
+        pceDetail,
+        pcePiles,
+        pitDetail,
+        pitPiles,
+        placaDetail,
+        placaPiles,
+        fichapdaDetail,
+        pdaDiarioDetail,
+        pdaDiarioPiles,
+      },
+      fileName
+    );
   };
 
   const handleExportCsvOne = () => {

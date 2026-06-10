@@ -17,5 +17,5 @@
 # Adicione estas variáveis:
 # - VITE_SUPABASE_URL
 # - VITE_SUPABASE_ANON_KEY
-# - VITE_GROQ_API_KEY (opcional, para o assistente AI)
+# - GROQ_API_KEY (opcional, para o assistente AI; usada apenas pela Netlify Function)
 
