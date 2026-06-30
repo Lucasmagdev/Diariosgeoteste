@@ -8,6 +8,7 @@ import FormInput from './FormInput';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { uploadCollaboratorPhoto, deleteOldCollaboratorPhoto } from '../utils/collaboratorPhotoStorage';
+import { Modal } from './ui';
 
 // Mock data (fallback quando Supabase não estiver configurado)
 const mockCollaborators: Collaborator[] = [
@@ -367,9 +368,9 @@ export const CollaboratorsManagement: React.FC = () => {
         
         <button
           onClick={() => handleOpenModal()}
-          className="w-full sm:w-auto bg-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium hover:bg-green-700 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center space-x-2 group"
+          className="w-full sm:w-auto bg-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium hover:bg-green-700 hover:shadow-lg active:scale-95 transition-all duration-200 flex items-center justify-center space-x-2 group"
         >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform duration-200" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="text-sm sm:text-base">Novo Colaborador</span>
         </button>
       </div>
@@ -393,7 +394,7 @@ export const CollaboratorsManagement: React.FC = () => {
         {filteredCollaborators.map((collaborator) => (
           <div
             key={collaborator.id}
-            className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:scale-105 hover:border-green-200 dark:hover:border-green-700 transition-all duration-300"
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-green-200 dark:hover:border-green-700 transition-all duration-300"
           >
             <div className="p-4 sm:p-5 md:p-6">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -424,14 +425,14 @@ export const CollaboratorsManagement: React.FC = () => {
                 <div className="flex items-center space-x-1 flex-shrink-0">
                   <button
                     onClick={() => handleOpenModal(collaborator)}
-                    className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 hover:scale-110"
+                    className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                     title="Editar"
                   >
                     <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteClick(collaborator.id, collaborator.name)}
-                    className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 hover:scale-110"
+                    className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
                     title="Excluir"
                   >
                     <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -488,16 +489,8 @@ export const CollaboratorsManagement: React.FC = () => {
       )}
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-800 my-8">
-            <div className="p-4 sm:p-5 md:p-6 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-                {editingCollaborator ? 'Editar Colaborador' : 'Novo Colaborador'}
-              </h2>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 md:p-6 space-y-3 sm:space-y-4">
+      <Modal open={showModal} onClose={handleCloseModal} title={editingCollaborator ? 'Editar colaborador' : 'Novo colaborador'}>
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Photo Upload */}
               <div className="flex flex-col items-center space-y-3">
                 <div className="relative">
@@ -647,9 +640,7 @@ export const CollaboratorsManagement: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Confirm Dialog */}
       <ConfirmDialog

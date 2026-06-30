@@ -17,7 +17,7 @@ const CollaboratorAvatar: React.FC<{
   return (
     <div className="flex flex-col items-center gap-1.5 sm:gap-2 group">
       <div className="relative w-12 h-12 sm:w-16 sm:h-16">
-        <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 transition-all hover:scale-110 shadow-sm hover:shadow-md">
+        <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 transition-all shadow-sm hover:shadow-md">
           {showImage ? (
             <img
               src={collaborator.photoUrl!}

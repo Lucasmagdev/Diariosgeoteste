@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, FileCheck2, Link2 } from 'lucide-react';
+import { Calendar, Clock, FileCheck2, PenLine, ShieldCheck } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { SignaturePadFixed } from './SignaturePadFixed';
-import { DiaryPDFLayout } from './DiaryPDFLayout';
+import { DiaryPdfPreview } from './DiaryPdfPreview';
 import { formatTime24hOrEmpty } from '../utils/time';
+import { diaryPdfBlobUrl } from '../utils/diaryPdf';
 
 interface PublicDiarySignatureProps {
   token: string;
@@ -49,6 +50,9 @@ const mapDiaryFromRow = (row: any) => {
     responsibleCpf: row?.responsible_signed_cpf || '',
     signatureStatus: row?.signature_status || (row?.responsible_signature_url ? 'signed' : 'pending'),
     observations: row?.observations || '',
+    weather_ensolarado: !!row?.weather_ensolarado,
+    weather_chuva_fraca: !!row?.weather_chuva_fraca,
+    weather_chuva_forte: !!row?.weather_chuva_forte,
     createdBy: '',
     createdAt: row?.created_at || '',
   };
@@ -70,6 +74,8 @@ export const PublicDiarySignature: React.FC<PublicDiarySignatureProps> = ({ toke
   const [signerCpf, setSignerCpf] = useState('');
   const [signatureImage, setSignatureImage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const callGetDiaryRpc = useCallback(async (signatureToken: string) => {
     const attempts: Array<Record<string, any>> = [
@@ -189,6 +195,52 @@ export const PublicDiarySignature: React.FC<PublicDiarySignatureProps> = ({ toke
   const canSign = Boolean(payload?.can_sign);
   const alreadySigned = Boolean(payload?.already_signed || diary?.signatureStatus === 'signed');
 
+  useEffect(() => {
+    if (!payload?.valid) {
+      setPreviewUrl((previousUrl) => {
+        if (previousUrl) URL.revokeObjectURL(previousUrl);
+        return '';
+      });
+      return;
+    }
+
+    let active = true;
+    setPreviewLoading(true);
+
+    diaryPdfBlobUrl({
+      diary,
+      pceDetail: payload?.pceDetail || undefined,
+      pcePiles: payload?.pcePiles || [],
+      pitDetail: payload?.pitDetail || undefined,
+      pitPiles: payload?.pitPiles || [],
+      placaDetail: payload?.placaDetail || undefined,
+      placaPiles: payload?.placaPiles || [],
+      fichapdaDetail: payload?.fichapdaDetail || undefined,
+      pdaDiarioDetail: payload?.pdaDiarioDetail || undefined,
+      pdaDiarioPiles: payload?.pdaDiarioPiles || [],
+    })
+      .then((url) => {
+        if (!active) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        setPreviewUrl((previousUrl) => {
+          if (previousUrl) URL.revokeObjectURL(previousUrl);
+          return url;
+        });
+      })
+      .catch((previewError) => {
+        console.error('Erro ao gerar visualizacao publica do diario:', previewError);
+      })
+      .finally(() => {
+        if (active) setPreviewLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [diary, payload]);
+
   const handleSubmit = async () => {
     const name = signerName.trim();
     if (!name) {
@@ -251,52 +303,78 @@ export const PublicDiarySignature: React.FC<PublicDiarySignatureProps> = ({ toke
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-6 px-3 sm:px-6">
-      <div className="max-w-6xl mx-auto space-y-4">
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 sm:p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Link2 className="w-4 h-4 text-green-600" />
-            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Assinatura de diário</h1>
+    <div className="min-h-screen bg-[#f3f7f5] dark:bg-gray-950 py-5 sm:py-8 px-3 sm:px-6">
+      <div className="max-w-5xl mx-auto space-y-5">
+        <header className="overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-800 via-emerald-700 to-green-600 text-white shadow-lg shadow-emerald-900/10">
+          <div className="p-5 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
+              <div className="flex items-start gap-4">
+                <div className="rounded-xl bg-white p-2 shadow-sm">
+                  <img src="/logogeoteste.png" alt="Geoteste" className="h-10 w-10 object-contain" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100">Geoteste</p>
+                  <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Revisão e assinatura</h1>
+                  <p className="mt-2 max-w-xl text-sm text-emerald-50/90">
+                    Confira o diário abaixo e confirme a assinatura do responsável.
+                  </p>
+                </div>
+              </div>
+              <div className="inline-flex self-start items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium backdrop-blur">
+                <ShieldCheck className="h-4 w-4" />
+                Link seguro
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-200">
-            <span className="inline-flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              Data: {diary?.date ? new Date(diary.date).toLocaleDateString('pt-BR') : '-'}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              Horário: {diary?.startTime || '-'} - {diary?.endTime || '-'}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <FileCheck2 className="w-4 h-4" />
-              Cliente: {diary?.clientName || '-'}
-            </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/15">
+            <div className="flex items-center gap-3 bg-emerald-950/20 px-5 py-3.5">
+              <Calendar className="h-4 w-4 text-emerald-100" />
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-emerald-100/70">Data</p>
+                <p className="text-sm font-medium">{diary?.date ? new Date(diary.date).toLocaleDateString('pt-BR') : '-'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 bg-emerald-950/20 px-5 py-3.5">
+              <Clock className="h-4 w-4 text-emerald-100" />
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-emerald-100/70">Horário</p>
+                <p className="text-sm font-medium">{diary?.startTime || '-'} - {diary?.endTime || '-'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 bg-emerald-950/20 px-5 py-3.5">
+              <FileCheck2 className="h-4 w-4 text-emerald-100" />
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-emerald-100/70">Cliente</p>
+                <p className="truncate text-sm font-medium">{diary?.clientName || '-'}</p>
+              </div>
+            </div>
           </div>
-          {payload?.expires_at && (
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Link válido até {new Date(payload.expires_at).toLocaleString('pt-BR')}.
-            </p>
+        </header>
+
+        <section className="rounded-2xl border border-gray-200/80 bg-white p-3 sm:p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <div className="mb-4 flex items-center justify-between gap-3 px-1">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Etapa 1</p>
+              <h2 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Revise o diário de obra</h2>
+            </div>
+            {payload?.expires_at && (
+              <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">
+                Válido até {new Date(payload.expires_at).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </div>
+          <div className="rounded-xl bg-slate-100 p-2 sm:p-3 dark:bg-gray-800">
+          {previewUrl ? (
+            <DiaryPdfPreview url={previewUrl} />
+          ) : (
+            <div className="flex items-center justify-center py-16 text-sm text-gray-500 dark:text-gray-400">
+              {previewLoading ? 'Gerando visualização atual do diário...' : 'Visualização indisponível.'}
+            </div>
           )}
-        </div>
-
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-2 sm:p-3 overflow-x-auto">
-          <div className="min-w-[920px]">
-            <DiaryPDFLayout
-              diary={diary}
-              pceDetail={payload?.pceDetail || undefined}
-              pcePiles={payload?.pcePiles || []}
-              pitDetail={payload?.pitDetail || undefined}
-              pitPiles={payload?.pitPiles || []}
-              placaDetail={payload?.placaDetail || undefined}
-              placaPiles={payload?.placaPiles || []}
-              fichapdaDetail={payload?.fichapdaDetail || undefined}
-              pdaDiarioDetail={payload?.pdaDiarioDetail || undefined}
-              pdaDiarioPiles={payload?.pdaDiarioPiles || []}
-            />
           </div>
-        </div>
+        </section>
 
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 sm:p-6">
+        <section className="rounded-2xl border border-gray-200/80 bg-white p-5 sm:p-7 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           {alreadySigned && (
             <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
               Este diário já foi assinado.
@@ -305,26 +383,35 @@ export const PublicDiarySignature: React.FC<PublicDiarySignatureProps> = ({ toke
 
           {!alreadySigned && canSign && (
             <>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Assinatura do cliente</h2>
+              <div className="mb-5 flex items-start gap-3 border-b border-gray-100 pb-5 dark:border-gray-800">
+                <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                  <PenLine className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Etapa 2</p>
+                  <h2 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Assinatura do responsável</h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Informe seus dados e assine para concluir.</p>
+                </div>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Nome do assinante</label>
                   <input
                     type="text"
                     value={signerName}
                     onChange={(e) => setSignerName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-3 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                     placeholder="Nome completo"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">CPF (opcional)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">CPF</label>
                   <input
                     type="text"
                     value={signerCpf}
                     onChange={(e) => setSignerCpf(formatCpf(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-3 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                     placeholder="000.000.000-00"
                   />
                 </div>
@@ -334,13 +421,14 @@ export const PublicDiarySignature: React.FC<PublicDiarySignatureProps> = ({ toke
                 onSave={(data) => setSignatureImage(data)}
                 onCancel={() => setSignatureImage('')}
                 initialSignature={signatureImage || undefined}
+                compact
               />
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-5 flex justify-end border-t border-gray-100 pt-5 dark:border-gray-800">
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !signerName.trim() || !signatureImage.trim()}
-                  className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
                   {submitting ? 'Confirmando assinatura...' : 'Confirmar assinatura do diário'}
                 </button>
@@ -359,7 +447,7 @@ export const PublicDiarySignature: React.FC<PublicDiarySignatureProps> = ({ toke
               {error}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

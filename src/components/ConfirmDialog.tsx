@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useId } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 export interface ConfirmDialogProps {
@@ -28,6 +28,17 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   type = 'danger',
   isLoading = false,
 }) => {
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!isOpen || isLoading) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isLoading, onClose]);
+
   if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -63,7 +74,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       case 'danger':
         return 'btn-danger';
       case 'warning':
-        return 'bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-lg font-medium hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
+        return 'bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed';
       case 'info':
         return 'btn-primary';
     }
@@ -73,10 +84,14 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
       onClick={handleBackdropClick}
+      role="presentation"
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
       >
         {/* Header */}
         <div className="flex items-start justify-between p-6 pb-4">
@@ -85,7 +100,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               <AlertTriangle className={`w-6 h-6 ${getIconColor()}`} />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 id={titleId} className="text-lg font-semibold text-gray-900 dark:text-white">
                 {title}
               </h3>
             </div>
@@ -94,7 +109,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           {!isLoading && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="app-icon-button app-icon-button-neutral"
+              aria-label="Fechar"
             >
               <X className="w-5 h-5" />
             </button>
@@ -120,7 +136,6 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             onClick={() => {
               onConfirm();
-              onClose();
             }}
             disabled={isLoading}
             className={`${getConfirmButtonClass()} flex-1 flex items-center justify-center gap-2`}

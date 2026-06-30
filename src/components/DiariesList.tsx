@@ -13,6 +13,7 @@ import { DiaryListSkeleton, Spinner } from './SkeletonLoader';
 import ConfirmDialog from './ConfirmDialog';
 import EmptyState from './EmptyState';
 import Pagination from './Pagination';
+import { FilterBar, PageHeader } from './ui';
 
 // Tipagem local para exibição
 type DiaryRow = WorkDiary;
@@ -84,6 +85,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
   const [endDate, setEndDate] = useState('');
   const [clientFilter, setClientFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedDiary, setSelectedDiary] = useState<DiaryRow | null>(null);
   const [rows, setRows] = useState<DiaryRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -624,8 +626,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
     fetchDetail();
   }, [selectedDiary]);
 
-  // Gera o PDF vetorial e o exibe na tela (mesmo arquivo do "Exportar PDF").
-  // Gera UMA vez, só depois que os detalhes terminarem de carregar, para não piscar.
+  // Gera o mesmo PDF vetorial usado na exportação para a visualização do painel.
   useEffect(() => {
     if (!selectedDiary) {
       setPreviewUrl((prev) => {
@@ -634,7 +635,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
       });
       return;
     }
-    if (loadingDetail) return; // espera os detalhes carregarem
+    if (loadingDetail) return;
     let active = true;
     (async () => {
       try {
@@ -659,7 +660,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
           return url;
         });
       } catch {
-        /* mantém a pré-visualização anterior em caso de erro */
+        /* O botão de exportação continua disponível em caso de falha na prévia. */
       }
     })();
     return () => {
@@ -910,7 +911,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
           </div>
         )}
 
-        {/* Pré-visualização: mesmo PDF vetorial do "Exportar PDF", renderizado responsivo */}
+        {/* Pré-visualização do mesmo PDF vetorial usado na exportação */}
         <div ref={detailsRef} className="w-full">
           <div className="w-full max-h-[70vh] sm:max-h-[80vh] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800 p-2 sm:p-3">
             {previewUrl ? (
@@ -928,28 +929,18 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 md:mb-8 px-1 sm:px-0 space-y-3 sm:space-y-0">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
-            Diários Geoteste
-          </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300">
-            Visualize todos os diários de obra da Geoteste
-          </p>
-        </div>
-        
+      <PageHeader title="Diários" description="Consulte, filtre, exporte e acompanhe assinaturas." eyebrow="Operação" actions={
         <button
           onClick={onNewDiary}
-          className="w-full sm:w-auto bg-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium hover:bg-green-700 hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-2"
+          className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
         >
           <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="text-sm sm:text-base">Novo Diário</span>
         </button>
-      </div>
+      } />
 
       {/* Filtros */}
-      <div className="mb-4 sm:mb-6">
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 sm:p-4">
+      <FilterBar>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
             {/* Busca */}
             <div className="relative sm:col-span-2 lg:col-span-3">
@@ -964,7 +955,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             </div>
 
             {/* Data inicial */}
-            <div className="sm:col-span-1">
+            <div className={`${showAdvancedFilters ? 'block' : 'hidden'} sm:col-span-1 lg:block`}>
               <label htmlFor="date-start" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 De
               </label>
@@ -981,7 +972,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             </div>
 
             {/* Data final */}
-            <div className="sm:col-span-1">
+            <div className={`${showAdvancedFilters ? 'block' : 'hidden'} sm:col-span-1 lg:block`}>
               <label htmlFor="date-end" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Até
               </label>
@@ -998,7 +989,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             </div>
 
             {/* Filtro de Cliente */}
-            <div className="sm:col-span-2 lg:col-span-1">
+            <div className={`${showAdvancedFilters ? 'block' : 'hidden'} sm:col-span-2 lg:col-span-1 lg:block`}>
               <label htmlFor="client-filter" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Cliente
               </label>
@@ -1016,7 +1007,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             </div>
 
             {/* Filtro de Tipo de Diário */}
-            <div className="sm:col-span-2 lg:col-span-1">
+            <div className={`${showAdvancedFilters ? 'block' : 'hidden'} sm:col-span-2 lg:col-span-1 lg:block`}>
               <label htmlFor="type-filter" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Tipo de Diário
               </label>
@@ -1036,11 +1027,11 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
             </div>
 
             {/* Ações */}
-            <div className="sm:col-span-2 lg:col-span-1 flex flex-col gap-2">
+            <div className={`${showAdvancedFilters ? 'flex' : 'hidden'} sm:col-span-2 lg:col-span-1 flex-col gap-2 lg:flex`}>
               <button
                 onClick={handleExportExcel}
                 disabled={filteredDiaries.length === 0 || loading}
-                className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-1.5"
+                className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-1.5"
                 title="Exportar para Excel"
               >
                 <FileSpreadsheet className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1048,15 +1039,21 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
               </button>
               <button
                 onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); setClientFilter(''); setTypeFilter(''); }}
-                className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600 hover:scale-105 transition-all duration-200"
+                className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-200"
                 title="Limpar filtros"
               >
                 Limpar
               </button>
             </div>
           </div>
-        </div>
-      </div>
+          <button
+            type="button"
+            onClick={() => setShowAdvancedFilters((current) => !current)}
+            className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400 lg:hidden"
+          >
+            {showAdvancedFilters ? 'Ocultar filtros' : 'Mais filtros'}
+          </button>
+      </FilterBar>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
@@ -1071,7 +1068,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
           {/* Diaries List */}
           <div className="space-y-3 sm:space-y-4">
             {paginatedDiaries.map((diary) => (
-          <div key={diary.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-700 hover:scale-[1.02] transition-all duration-200 cursor-pointer">
+          <div key={diary.id} className="app-surface app-surface-interactive">
             <div className="p-3 sm:p-4 md:p-6">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
                 <div className="flex-1 min-w-0">
@@ -1122,7 +1119,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
                 <div className="flex items-center justify-end sm:justify-start space-x-2 sm:ml-4">
                   <button
                     onClick={() => setSelectedDiary(diary)}
-                    className="p-1.5 sm:p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200 hover:scale-110"
+                    className="p-1.5 sm:p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
                     title="Visualizar"
                   >
                     <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1135,7 +1132,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
                           e.stopPropagation();
                           handleEditDiary(diary);
                         }}
-                        className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 hover:scale-110"
+                        className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                         title="Editar"
                       >
                         <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1145,7 +1142,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
                           e.stopPropagation();
                           handleDeleteClick(diary);
                         }}
-                        className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 hover:scale-110"
+                        className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
                         title="Excluir"
                       >
                         <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />

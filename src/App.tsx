@@ -16,6 +16,8 @@ import { InstallPWA } from './components/InstallPWA';
 import { useIsPWA } from './hooks/useIsPWA';
 import { EquipmentMap } from './components/EquipmentMap';
 import { PublicDiarySignature } from './components/PublicDiarySignature';
+import { PortalManagement } from './components/PortalManagement';
+import { ClientPortal } from './components/ClientPortal';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -27,10 +29,14 @@ const AppContent: React.FC = () => {
     []
   );
   const isPublicSignaturePage = Boolean(signatureToken);
+  const isClientPortalPage = useMemo(
+    () => new URLSearchParams(window.location.search).get('portal') != null,
+    []
+  );
 
   // Mostrar splash screen apenas na primeira vez e se for PWA ou mobile
   useEffect(() => {
-    if (isPublicSignaturePage) {
+    if (isPublicSignaturePage || isClientPortalPage) {
       setShowSplash(false);
       return;
     }
@@ -48,6 +54,10 @@ const AppContent: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [isPWA, isPublicSignaturePage]);
+
+  if (isClientPortalPage) {
+    return <ClientPortal />;
+  }
 
   if (isPublicSignaturePage) {
     return <PublicDiarySignature token={signatureToken} />;
@@ -86,6 +96,8 @@ const AppContent: React.FC = () => {
         return user.role === 'admin' ? <UsersManagement /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'equipment':
         return user.role === 'admin' ? <EquipmentMap /> : <Dashboard onPageChange={setCurrentPage} />;
+      case 'portal':
+        return user.role === 'admin' ? <PortalManagement /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'profile':
         return <ProfilePage />;
       default:
@@ -96,8 +108,7 @@ const AppContent: React.FC = () => {
   return (
     <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
       {renderPage()}
-      <AgentAssistant />
-      <DiaryHelp />
+      {currentPage === 'new-diary' ? <DiaryHelp /> : <AgentAssistant />}
       <InstallPWA />
     </Layout>
   );

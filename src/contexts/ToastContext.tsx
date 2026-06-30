@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import Toast, { ToastType, ToastProps } from '../components/Toast';
+import Toast, { ToastType } from '../components/Toast';
 
 interface ToastData {
   id: string;
@@ -53,7 +53,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       
       {/* Container de Toasts - posicionado no canto superior direito */}
-      <div className="fixed top-4 right-4 z-50 pointer-events-none">
+      <div className="fixed top-4 right-4 z-50 pointer-events-none" aria-live="polite" aria-atomic="false">
         <div className="pointer-events-auto">
           {toasts.map((toast) => (
             <Toast

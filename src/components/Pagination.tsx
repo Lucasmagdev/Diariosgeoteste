@@ -62,7 +62,7 @@ const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+    <nav aria-label="Paginação" className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
       {/* Info de itens */}
       <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
         <span>
@@ -92,6 +92,7 @@ const Pagination: React.FC<PaginationProps> = ({
           disabled={currentPage === 1}
           className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           title="Página anterior"
+          aria-label="Página anterior"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -122,6 +123,7 @@ const Pagination: React.FC<PaginationProps> = ({
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                   }
                 `}
+                aria-current={isActive ? 'page' : undefined}
               >
                 {pageNumber}
               </button>
@@ -135,11 +137,12 @@ const Pagination: React.FC<PaginationProps> = ({
           disabled={currentPage === totalPages}
           className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           title="Próxima página"
+          aria-label="Próxima página"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
-    </div>
+    </nav>
   );
 };
 

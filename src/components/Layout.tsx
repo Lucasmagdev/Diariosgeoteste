@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, UserCircle } from 'lucide-react';
+import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomNav } from './BottomNav';
 
@@ -31,19 +31,29 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
 
   const baseMenuItems = [
     { key: 'dashboard', label: 'Dashboard', icon: Home },
-    { key: 'diaries', label: 'Diários Geoteste', icon: FileText },
-    { key: 'new-diary', label: 'Novo Diário', icon: FileText },
+    { key: 'diaries', label: 'Diários', icon: FileText },
     { key: 'profile', label: 'Meu Perfil', icon: User },
   ];
 
   const adminMenuItems = [
     ...baseMenuItems,
     { key: 'equipment', label: 'Equipamentos', icon: Map },
-    { key: 'users', label: 'Usuários e Colaboradores', icon: Users },
+    { key: 'users', label: 'Equipe', icon: Users },
     { key: 'clients', label: 'Clientes', icon: Building2 },
+    { key: 'portal', label: 'Portal do Cliente', icon: Globe },
   ];
 
   const menuItems = user?.role === 'admin' ? adminMenuItems : baseMenuItems;
+  const pageTitles: Record<string, string> = {
+    dashboard: 'Início',
+    diaries: 'Diários',
+    'new-diary': 'Novo diário',
+    profile: 'Meu perfil',
+    equipment: 'Equipamentos',
+    users: 'Usuários',
+    clients: 'Clientes',
+    portal: 'Portal do Cliente',
+  };
 
   const handleMenuClick = (page: string) => {
     onPageChange(page);
@@ -93,13 +103,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
           </div>
             <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 active:scale-95"
               >
                 <X className="w-5 h-5" />
               </button>
         </div>
 
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-3">
+          <button onClick={() => handleMenuClick('new-diary')} className="btn-primary flex w-full items-center justify-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo diário
+          </button>
+          <div className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.key;
@@ -110,7 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                   isActive
                     ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 font-medium'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:scale-[1.01]'
+                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
@@ -118,12 +133,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
               </button>
             );
           })}
+          </div>
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-800">
           <button
             onClick={logout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 active:scale-[0.98]"
           >
             <LogOut className="w-5 h-5" />
             <span>Sair</span>
@@ -139,7 +155,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
             {canGoBack && (
               <button
                 onClick={handleBack}
-                className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 active:scale-95"
                 aria-label="Voltar"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -150,19 +166,19 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
             {!canGoBack && (
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 active:scale-95"
                 aria-label="Menu"
               >
                 <Menu className="w-5 h-5" />
               </button>
             )}
 
-            <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden shadow-sm bg-transparent dark:bg-transparent transition-all duration-300 hover:shadow-md hover:scale-105">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden shadow-sm bg-transparent dark:bg-transparent transition-all duration-300 hover:shadow-md">
               <img src="/logogeoteste.png" alt="Geoteste" className="w-full h-full object-contain p-1" />
             </div>
             <div className="leading-tight">
               <h1 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 dark:text-white">Geoteste</h1>
-              <p className="text-[10px] sm:text-[11px] md:text-xs text-gray-500 dark:text-gray-400">Diários de Obra</p>
+              <p className="text-[10px] sm:text-[11px] md:text-xs text-gray-500 dark:text-gray-400">{pageTitles[currentPage] || 'Diários de Obra'}</p>
             </div>
           </div>
 
@@ -171,21 +187,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
 
             <button
               onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:scale-105 active:scale-95 transition-all duration-200"
+              className="p-1.5 sm:p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 active:scale-95 transition-all duration-200"
               aria-label="Alternar tema"
               title={isDark ? 'Tema escuro' : 'Tema claro'}
             >
-              {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200 hover:rotate-90" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200 hover:rotate-12" />}
-            </button>
-
-            {/* Logout - Mobile */}
-            <button
-              onClick={logout}
-              className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 md:hidden"
-              title="Sair"
-              aria-label="Sair"
-            >
-              <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+              {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" />}
             </button>
 
             <div className="hidden sm:flex items-center space-x-2 md:space-x-3">
@@ -199,7 +205,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
               </div>
               <button
                 onClick={logout}
-                className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+                className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 active:scale-95"
                 title="Sair"
                 aria-label="Sair"
               >
@@ -214,6 +220,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
         {/* Sidebar */}
         <nav className="hidden md:block w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 min-h-[calc(100vh-56px)] sticky top-14">
           <div className="p-4">
+            <button onClick={() => onPageChange('new-diary')} className="btn-primary mb-4 flex w-full items-center justify-center gap-2">
+              <Plus className="h-4 w-4" />
+              Novo diário
+            </button>
             <ul className="space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
@@ -226,7 +236,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
                       className={`group w-full flex items-center px-3 py-2 rounded-lg text-left transition-all duration-200 border ${
                         isActive
                           ? 'bg-brand-50 dark:bg-brand-600/10 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-700 shadow-sm'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm hover:scale-[1.02] border-transparent'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm border-transparent'
                       }`}
                     >
                       <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} />

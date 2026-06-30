@@ -78,7 +78,7 @@ export const DiaryHelp: React.FC = () => {
           className="rounded-full bg-blue-600 hover:bg-blue-700 text-white p-3 sm:p-4 shadow-lg hover:shadow-xl transition-all duration-200 group min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
           title="Dúvidas sobre o Diário"
         >
-          {open ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform duration-200" />}
+          {open ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" />}
         </button>
       </div>
 

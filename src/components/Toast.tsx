@@ -48,6 +48,7 @@ const Toast: React.FC<ToastProps> = ({ id, type, message, duration = 4000, onClo
 
   return (
     <div
+      role={type === 'error' ? 'alert' : 'status'}
       className={`
         flex items-start gap-3 p-4 mb-3
         bg-white dark:bg-gray-800 
@@ -70,6 +71,7 @@ const Toast: React.FC<ToastProps> = ({ id, type, message, duration = 4000, onClo
       <button
         onClick={() => onClose(id)}
         className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        aria-label="Fechar notificação"
       >
         <X className="w-4 h-4" />
       </button>

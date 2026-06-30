@@ -98,25 +98,18 @@ export const AgentAssistant: React.FC = () => {
     <>
       {/* Toggle */}
       <div className="fixed right-4 bottom-20 md:bottom-4 z-[60]">
-        {/* Tooltip fixo */}
-        {!open && (
-          <div className="absolute right-16 bottom-2 bg-gray-900 dark:bg-gray-700 text-white text-sm px-3 py-2 rounded-lg shadow-lg whitespace-nowrap hidden sm:block">
-            Precisa de ajuda?
-            <div className="absolute right-0 top-1/2 transform translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
-          </div>
-        )}
-        
         <button
           onClick={() => setOpen(!open)}
-          className="rounded-full bg-green-600 hover:bg-green-700 text-white p-3 sm:p-4 shadow-lg hover:shadow-xl transition-all duration-200 group min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+          className="rounded-full bg-green-600 hover:bg-green-700 text-white p-3 shadow-lg transition-colors duration-150 group min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation"
           title="Assistente IA"
+          aria-label={open ? 'Fechar assistente' : 'Abrir assistente'}
         >
-          {open ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Bot className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform duration-200" />}
+          {open ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Bot className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" />}
         </button>
       </div>
 
       {open && (
-        <div className="fixed right-2 sm:right-4 bottom-24 sm:bottom-20 md:bottom-20 z-[60] w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-md max-h-[70vh] sm:max-h-[80vh] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl overflow-hidden flex flex-col">
+        <section role="dialog" aria-modal="true" aria-label="Assistente IA" className="fixed inset-x-2 bottom-20 z-[60] flex max-h-[82vh] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 sm:inset-x-auto sm:right-4 sm:w-[calc(100%-2rem)] sm:max-w-md md:bottom-4 md:right-4">
           <div className="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
               <button
@@ -228,7 +221,7 @@ export const AgentAssistant: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </section>
       )}
     </>
   );

@@ -8,6 +8,7 @@ import FormInput from './FormInput';
 import FormTextarea from './FormTextarea';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { FilterBar, IconButton, Modal, PageHeader, Surface } from './ui';
 
 // Mock data (fallback quando Supabase não estiver configurado)
 const mockClients: Client[] = [
@@ -227,23 +228,18 @@ export const ClientsManagement: React.FC = () => {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 md:mb-8 space-y-3 sm:space-y-0">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">Gerenciamento de Clientes</h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300">Cadastre e gerencie os clientes da empresa</p>
-        </div>
-        
+      <PageHeader title="Clientes" description="Contatos, endereços e relacionamentos da empresa." eyebrow="Gestão" actions={
         <button
           onClick={() => handleOpenModal()}
-          className="w-full sm:w-auto bg-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium hover:bg-green-700 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center space-x-2 group"
+          className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
         >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform duration-200" />
-          <span className="text-sm sm:text-base">Novo Cliente</span>
+          <Plus className="h-4 w-4" />
+          <span>Novo cliente</span>
         </button>
-      </div>
+      } />
 
       {/* Search */}
-      <div className="mb-4 sm:mb-6">
+      <FilterBar>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
           <input
@@ -261,16 +257,16 @@ export const ClientsManagement: React.FC = () => {
             {loading ? 'Atualizando...' : 'Atualizar'}
           </button>
         </div>
-      </div>
+      </FilterBar>
 
       {/* Clients Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredClients.map((client) => (
-          <div key={client.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:scale-105 hover:border-green-200 dark:hover:border-green-700 transition-all duration-300 group cursor-pointer">
+          <Surface key={client.id} interactive>
             <div className="p-4 sm:p-5 md:p-6">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 dark:group-hover:bg-green-800/50 group-hover:scale-110 transition-all duration-300">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 dark:group-hover:bg-green-800/50 transition-all duration-300">
                     <Building2 className="text-green-600 dark:text-green-400 w-5 h-5 sm:w-6 sm:h-6 group-hover:text-green-700 dark:group-hover:text-green-300 transition-colors duration-300" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -280,20 +276,8 @@ export const ClientsManagement: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center space-x-1 flex-shrink-0">
-                  <button
-                    onClick={() => handleOpenModal(client)}
-                    className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 hover:scale-110"
-                    title="Editar"
-                  >
-                    <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(client.id, client.name)}
-                    className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 hover:scale-110"
-                    title="Excluir"
-                  >
-                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
+                  <IconButton icon={Edit} label={`Editar ${client.name}`} tone="primary" onClick={() => handleOpenModal(client)} />
+                  <IconButton icon={Trash2} label={`Excluir ${client.name}`} tone="danger" onClick={() => handleDeleteClick(client.id, client.name)} />
                 </div>
               </div>
               
@@ -318,7 +302,7 @@ export const ClientsManagement: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
+          </Surface>
         ))}
       </div>
 
@@ -339,16 +323,8 @@ export const ClientsManagement: React.FC = () => {
       )}
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm sm:max-w-md border border-gray-100 dark:border-gray-800">
-            <div className="p-4 sm:p-5 md:p-6 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-                {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
-              </h2>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 md:p-6 space-y-3 sm:space-y-4">
+      <Modal open={showModal} onClose={handleCloseModal} title={editingClient ? 'Editar cliente' : 'Novo cliente'}>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <FormInput
                 label="Nome da Empresa"
                 type="text"
@@ -420,9 +396,7 @@ export const ClientsManagement: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Confirm Dialog */}
       <ConfirmDialog

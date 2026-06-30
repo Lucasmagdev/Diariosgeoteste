@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, User, Mail, Shield, ShieldCheck, Edit, Trash2, Phone, Camera, Loader2, X, Briefcase } from 'lucide-react';
+import { Search, Plus, User, Mail, Shield, ShieldCheck, Edit, Trash2, Phone, Camera, Loader2, X } from 'lucide-react';
 import { User as UserType } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { useToast } from '../contexts/ToastContext';
 import { TableSkeleton, UserCardSkeleton } from './SkeletonLoader';
 import ConfirmDialog from './ConfirmDialog';
 import EmptyState from './EmptyState';
+import { FilterBar, Modal, PageHeader } from './ui';
 import { uploadCollaboratorPhoto, deleteOldCollaboratorPhoto } from '../utils/collaboratorPhotoStorage';
 import FormInput from './FormInput';
 
@@ -425,25 +426,18 @@ export const UsersManagement: React.FC = () => {
 
   return (
     <div>
-      <div className="flex flex-col space-y-3 mb-4 sm:mb-6 md:mb-8">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-3 sm:space-y-0">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2 truncate">Gerenciamento de Usuários</h1>
-            <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300">Cadastre e gerencie os usuários do sistema</p>
-          </div>
-          
+      <PageHeader title="Usuários" description="Gerencie acesso ao sistema e dados profissionais." eyebrow="Gestão" actions={
           <button
             onClick={() => handleOpenModal()}
-            className="w-full sm:w-auto bg-green-600 text-white px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-lg font-medium hover:bg-green-700 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center space-x-2 min-h-[44px] touch-manipulation"
+            className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
             <span className="text-sm sm:text-base font-medium">Novo Usuário</span>
           </button>
-        </div>
-      </div>
+      } />
 
       {/* Search */}
-      <div className="mb-4 sm:mb-6">
+      <FilterBar>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
           <input
@@ -454,7 +448,7 @@ export const UsersManagement: React.FC = () => {
             className="w-full pl-9 sm:pl-10 pr-4 py-3 sm:py-3.5 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent min-h-[44px] touch-manipulation"
           />
         </div>
-      </div>
+      </FilterBar>
 
       {/* Error Message */}
       {error && (
@@ -654,16 +648,8 @@ export const UsersManagement: React.FC = () => {
       </div>
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-                {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
-              </h2>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+      <Modal open={showModal} onClose={handleCloseModal} title={editingUser ? 'Editar usuário' : 'Novo usuário'} size="lg">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Photo Upload */}
               <div className="flex flex-col items-center space-y-3">
                 <div className="relative">
@@ -826,9 +812,7 @@ export const UsersManagement: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Confirm Dialog */}
       <ConfirmDialog

@@ -13,6 +13,7 @@ import {
   Trash,
   Sparkles,
   ListFilter,
+  Plus,
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { EquipmentLocation, Client } from '../types';
@@ -23,6 +24,7 @@ import FormTextarea from './FormTextarea';
 import EmptyState from './EmptyState';
 import ConfirmDialog from './ConfirmDialog';
 import { EquipmentCollaboratorsPanel } from './EquipmentCollaboratorsPanel';
+import { PageHeader } from './ui';
 
 const defaultCenter: LatLngExpression = [-15.78, -47.93]; // Brasília como centro padrão
 
@@ -123,6 +125,7 @@ export const EquipmentMap: React.FC = () => {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentLocation | null>(null);
   const [editingEquipment, setEditingEquipment] = useState<EquipmentLocation | null>(null);
+  const [showEquipmentForm, setShowEquipmentForm] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -358,6 +361,7 @@ export const EquipmentMap: React.FC = () => {
   };
 
   const handleEdit = (equipment: EquipmentLocation) => {
+    setShowEquipmentForm(true);
     setEditingEquipment(equipment);
     setSelectedEquipment(equipment);
     setFormData({
@@ -491,13 +495,12 @@ export const EquipmentMap: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <header>
-        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Mapa Interativo</p>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Equipamentos em campo</h1>
-        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-          Cadastre os equipamentos e acompanhe no mapa onde cada um está localizado.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Operação"
+        title="Equipamentos"
+        description="Acompanhe localização, status e equipes responsáveis."
+        actions={<button onClick={() => { resetForm(); setShowEquipmentForm(true); }} className="btn-primary flex items-center gap-2"><Plus className="h-4 w-4" />Cadastrar equipamento</button>}
+      />
 
       <section className="rounded-2xl border border-gray-100 bg-white p-3 sm:p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div className="flex flex-col gap-3 sm:gap-4">
@@ -558,7 +561,8 @@ export const EquipmentMap: React.FC = () => {
         </div>
       </section>
 
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[420px,1fr]">
+      <div className={`grid gap-4 sm:gap-6 ${showEquipmentForm ? 'lg:grid-cols-[420px,1fr]' : 'grid-cols-1'}`}>
+        {showEquipmentForm && (
         <section className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex-1">
@@ -573,7 +577,7 @@ export const EquipmentMap: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={resetForm}
+              onClick={() => { resetForm(); setShowEquipmentForm(false); }}
               className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white sm:ml-2"
             >
             {editingEquipment ? 'Cancelar edição' : 'Limpar'}
@@ -685,6 +689,7 @@ export const EquipmentMap: React.FC = () => {
             </button>
           </form>
         </section>
+        )}
 
         <section className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-4 space-y-3">

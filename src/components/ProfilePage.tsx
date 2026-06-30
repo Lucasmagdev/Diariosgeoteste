@@ -6,6 +6,7 @@ import { SignaturePadFixed as SignaturePad } from './SignaturePadFixed';
 import { saveSignatureToDatabase } from '../utils/signatureStorageFallback';
 import { uploadCollaboratorPhoto, deleteOldCollaboratorPhoto } from '../utils/collaboratorPhotoStorage';
 import { useToast } from '../contexts/ToastContext';
+import { PageHeader } from './ui';
 
 export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -311,19 +312,13 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Meu Perfil
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Gerencie suas informações pessoais e assinatura digital
-        </p>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader title="Meu perfil" description="Gerencie suas informações pessoais e assinatura digital." eyebrow="Conta" />
 
+      <div className="grid items-start gap-6 xl:grid-cols-[0.9fr_1.1fr]">
       {/* Informações do Usuário */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden mb-6">
-        <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-900/20">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+        <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações Pessoais</h2>
         </div>
         
@@ -505,7 +500,7 @@ export const ProfilePage: React.FC = () => {
 
       {/* Assinatura Digital */}
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-900/20">
+        <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Assinatura Digital</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Desenhe sua assinatura na mesa digital. Ela será usada automaticamente nos diários que você criar.
@@ -622,6 +617,7 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

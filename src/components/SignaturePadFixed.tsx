@@ -6,12 +6,14 @@ interface SignaturePadFixedProps {
   onSave: (signatureData: string) => void;
   onCancel: () => void;
   initialSignature?: string;
+  compact?: boolean;
 }
 
 export const SignaturePadFixed: React.FC<SignaturePadFixedProps> = ({ 
   onSave, 
   onCancel, 
-  initialSignature 
+  initialSignature,
+  compact = false,
 }) => {
   const sigPad = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -120,20 +122,20 @@ export const SignaturePadFixed: React.FC<SignaturePadFixedProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-      <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-900/20">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Mesa Digital de Assinatura
+    <div className={`bg-white dark:bg-gray-900 overflow-hidden ${compact ? '' : 'rounded-xl shadow-sm border border-gray-100 dark:border-gray-800'}`}>
+      <div className={compact ? 'pb-4' : 'p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-900/20'}>
+        <h3 className={`${compact ? 'text-base' : 'text-lg'} font-semibold text-gray-900 dark:text-white mb-1`}>
+          Assine no campo abaixo
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          Desenhe sua assinatura na área abaixo usando o mouse ou touch
+          Use o mouse ou toque na tela. Depois, salve a assinatura.
         </p>
       </div>
 
-      <div className="p-4 sm:p-6">
+      <div className={compact ? '' : 'p-4 sm:p-6'}>
         {/* Área de assinatura */}
         <div className="mb-4">
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white">
+          <div className={`border-2 border-dashed rounded-xl overflow-hidden bg-white ${compact ? 'border-emerald-300 shadow-inner' : 'border-gray-300 dark:border-gray-600'}`}>
             <SignatureCanvas
               ref={sigPad}
               canvasProps={{
@@ -176,24 +178,24 @@ export const SignaturePadFixed: React.FC<SignaturePadFixedProps> = ({
               <span className="text-sm">Limpar</span>
             </button>
             
-            <button
+            {!compact && <button
               onClick={downloadSignature}
               disabled={isEmpty}
               className="flex items-center space-x-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Download className="w-4 h-4" />
               <span className="text-sm">Baixar</span>
-            </button>
+            </button>}
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
+            {!compact && <button
               onClick={onCancel}
               className="flex items-center space-x-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               <X className="w-4 h-4" />
               <span>Cancelar</span>
-            </button>
+            </button>}
             
             <button
               onClick={handleSave}
@@ -211,7 +213,7 @@ export const SignaturePadFixed: React.FC<SignaturePadFixedProps> = ({
         </div>
 
         {/* Dicas de uso */}
-        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        {!compact && <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <h4 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
             💡 Dicas para uma boa assinatura:
           </h4>
@@ -221,7 +223,7 @@ export const SignaturePadFixed: React.FC<SignaturePadFixedProps> = ({
             <li>• A assinatura será salva como imagem</li>
             <li>• Você pode limpar e refazer quantas vezes quiser</li>
           </ul>
-        </div>
+        </div>}
       </div>
     </div>
   );

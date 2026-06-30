@@ -111,6 +111,54 @@ export interface TeamEquipmentAssignment {
   equipment?: EquipmentLocation; // Para quando carregar com relacionamento
 }
 
+export type ObraDocumentCategory =
+  | 'contrato'
+  | 'dados_cliente'
+  | 'sondagem'
+  | 'projetos'
+  | 'diarios'
+  | 'medicoes'
+  | 'relatorio'
+  | 'art'
+  | 'outro';
+
+export interface Obra {
+  id: string;
+  obraCode?: string | null;
+  name: string;
+  clientId?: string | null;
+  address?: string | null;
+  status: 'ativa' | 'concluida' | 'inativa';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ObraDocument {
+  id: string;
+  obraId: string;
+  category: ObraDocumentCategory;
+  customLabel?: string | null;
+  title: string;
+  fileUrl: string;
+  fileType?: string | null;
+  requiresSignature: boolean;
+  signatureUrl?: string | null;
+  signedAt?: string | null;
+  signedBy?: string | null;
+  signedCpf?: string | null;
+  signatureStatus: 'na' | 'pending' | 'signed';
+  createdAt: string;
+}
+
+export interface PortalCredential {
+  id: string;
+  clientId: string;
+  email: string;
+  active: boolean;
+  createdAt: string;
+  lastLoginAt?: string | null;
+}
+
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; code?: string; message?: string }>;
