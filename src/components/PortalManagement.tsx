@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Plus, Building2, Edit, Trash2, Link as LinkIcon, KeyRound, Upload, FileText,
-  CheckCircle2, XCircle, ChevronDown, ChevronRight, Paperclip, PenLine,
+  CheckCircle2, XCircle, ChevronDown, ChevronRight, Paperclip, PenLine, Calendar, Image as ImageIcon,
 } from 'lucide-react';
 import { Client, Obra, ObraDocument, ObraDocumentCategory, PortalCredential } from '../types';
 import { useToast } from '../contexts/ToastContext';
@@ -25,6 +25,8 @@ const CATEGORIES: { value: ObraDocumentCategory; label: string }[] = [
 const categoryLabel = (c: ObraDocumentCategory, custom?: string | null) =>
   c === 'outro' ? (custom?.trim() || 'Outro') : (CATEGORIES.find(x => x.value === c)?.label || c);
 
+const isImage = (t?: string | null) => !!t && t.startsWith('image');
+
 const buildPortalLink = (): string => {
   const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();
   let url: URL;
@@ -38,60 +40,42 @@ const buildPortalLink = (): string => {
 };
 
 const mapObra = (r: any): Obra => ({
-  id: r.id,
-  obraCode: r.obra_code,
-  name: r.name,
-  clientId: r.client_id,
-  address: r.address,
-  status: r.status,
-  createdAt: r.created_at,
-  updatedAt: r.updated_at,
+  id: r.id, obraCode: r.obra_code, name: r.name, clientId: r.client_id,
+  address: r.address, status: r.status, createdAt: r.created_at, updatedAt: r.updated_at,
 });
 
 const mapDoc = (r: any): ObraDocument => ({
-  id: r.id,
-  obraId: r.obra_id,
-  category: r.category,
-  customLabel: r.custom_label,
-  title: r.title,
-  fileUrl: r.file_url,
-  fileType: r.file_type,
-  requiresSignature: !!r.requires_signature,
-  signatureUrl: r.signature_url,
-  signedAt: r.signed_at,
-  signedBy: r.signed_by,
-  signedCpf: r.signed_cpf,
-  signatureStatus: r.signature_status,
-  createdAt: r.created_at,
+  id: r.id, obraId: r.obra_id, category: r.category, customLabel: r.custom_label,
+  title: r.title, fileUrl: r.file_url, fileType: r.file_type,
+  requiresSignature: !!r.requires_signature, signatureUrl: r.signature_url,
+  signedAt: r.signed_at, signedBy: r.signed_by, signedCpf: r.signed_cpf,
+  signatureStatus: r.signature_status, createdAt: r.created_at,
 });
 
 const mapCred = (r: any): PortalCredential => ({
-  id: r.id,
-  clientId: r.client_id,
-  email: r.email,
-  active: !!r.active,
-  createdAt: r.created_at,
-  lastLoginAt: r.last_login_at,
+  id: r.id, clientId: r.client_id, email: r.email, active: !!r.active,
+  createdAt: r.created_at, lastLoginAt: r.last_login_at,
 });
+
+interface DiaryLite { id: string; date: string; diary_type: string; services: string; status: string; }
 
 export const PortalManagement: React.FC = () => {
   const toast = useToast();
-  const [tab, setTab] = useState<'obras' | 'acessos'>('obras');
   const [clients, setClients] = useState<Client[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [credentials, setCredentials] = useState<PortalCredential[]>([]);
   const [docsByObra, setDocsByObra] = useState<Record<string, ObraDocument[]>>({});
+  const [diariesByObra, setDiariesByObra] = useState<Record<string, DiaryLite[]>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const clientName = (id?: string | null) => clients.find(c => c.id === id)?.name || '—';
+  const clientById = (id?: string | null) => clients.find(c => c.id === id);
+  const clientName = (id?: string | null) => clientById(id)?.name || '—';
+  const credByClient = (id?: string | null) => credentials.find(c => c.clientId === id);
 
   // ----- fetch -----
   const fetchAll = async () => {
-    if (!isSupabaseConfigured) {
-      toast.error('Supabase não configurado.');
-      return;
-    }
+    if (!isSupabaseConfigured) { toast.error('Supabase não configurado.'); return; }
     setLoading(true);
     try {
       const [c, o, cr] = await Promise.all([
@@ -111,9 +95,7 @@ export const PortalManagement: React.FC = () => {
     } catch (err) {
       console.error(err);
       toast.error('Falha ao carregar dados do portal.');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchAll(); }, []);
@@ -125,32 +107,74 @@ export const PortalManagement: React.FC = () => {
     setDocsByObra(prev => ({ ...prev, [obraId]: (data || []).map(mapDoc) }));
   };
 
-  const toggleExpand = (obraId: string) => {
-    const next = expanded === obraId ? null : obraId;
-    setExpanded(next);
-    if (next && !docsByObra[next]) fetchDocs(next);
+  const fetchDiaries = async (obra: Obra) => {
+    const sel = 'id,date,diary_type,services_executed,signature_status';
+    const byObra = await supabase.from('work_diaries').select(sel).eq('obra_id', obra.id);
+    const name = clientName(obra.clientId);
+    const byName = name && name !== '—'
+      ? await supabase.from('work_diaries').select(sel).is('obra_id', null).eq('client_name', name)
+      : { data: [] as any[] };
+    const rows = [...(byObra.data || []), ...((byName as any).data || [])];
+    const seen = new Set<string>();
+    const list: DiaryLite[] = [];
+    rows.forEach((r: any) => {
+      if (seen.has(r.id)) return;
+      seen.add(r.id);
+      list.push({ id: r.id, date: r.date, diary_type: r.diary_type || 'Diário', services: r.services_executed || '', status: r.signature_status || 'pending' });
+    });
+    list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    setDiariesByObra(prev => ({ ...prev, [obra.id]: list }));
   };
 
-  // ----- Obra modal -----
+  const toggleExpand = (obra: Obra) => {
+    const next = expanded === obra.id ? null : obra.id;
+    setExpanded(next);
+    if (next) {
+      if (!docsByObra[next]) fetchDocs(next);
+      if (!diariesByObra[next]) fetchDiaries(obra);
+    }
+  };
+
+  // ----- Obra + Acesso modal (fluxo unificado) -----
   const [obraModal, setObraModal] = useState(false);
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
-  const [obraForm, setObraForm] = useState({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa' });
+  const [obraForm, setObraForm] = useState({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa', username: '', password: '' });
 
   const openObraModal = (o?: Obra) => {
     if (o) {
+      const cred = credByClient(o.clientId);
       setEditingObra(o);
-      setObraForm({ obra_code: o.obraCode || '', name: o.name, client_id: o.clientId || '', address: o.address || '', status: o.status });
+      setObraForm({ obra_code: o.obraCode || '', name: o.name, client_id: o.clientId || '', address: o.address || '', status: o.status, username: cred?.email || '', password: '' });
     } else {
       setEditingObra(null);
-      setObraForm({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa' });
+      setObraForm({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa', username: '', password: '' });
     }
     setObraModal(true);
+  };
+
+  const upsertCredential = async (clientId: string, username: string, password: string) => {
+    const { data, error } = await supabase.rpc('portal_create_credential', {
+      p_client_id: clientId, p_email: username.trim().toLowerCase(), p_password: password,
+    });
+    if (error) throw error;
+    if (!data?.ok) throw new Error(data?.message || 'Falha no login');
+    // garante 1 login ativo por cliente
+    await Promise.all(
+      credentials.filter(c => c.clientId === clientId && c.id !== data.id)
+        .map(c => supabase.rpc('portal_set_active', { p_credential_id: c.id, p_active: false }))
+    );
   };
 
   const saveObra = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!obraForm.name.trim()) { toast.error('Informe o nome da obra.'); return; }
     if (!obraForm.client_id) { toast.error('Selecione o cliente.'); return; }
+    const wantsLogin = obraForm.username.trim() || obraForm.password;
+    if (wantsLogin) {
+      if (!obraForm.username.trim()) { toast.error('Informe o usuário do login.'); return; }
+      if (obraForm.username.trim().includes(' ')) { toast.error('O usuário não pode ter espaços.'); return; }
+      if (obraForm.password.length < 6) { toast.error('Senha mínima de 6 caracteres.'); return; }
+    }
     const payload = {
       obra_code: obraForm.obra_code.trim() || null,
       name: obraForm.name.trim(),
@@ -161,20 +185,19 @@ export const PortalManagement: React.FC = () => {
     try {
       setLoading(true);
       if (editingObra) {
-        const { data, error } = await supabase.from('obras').update(payload).eq('id', editingObra.id).select('*').single();
+        const { error } = await supabase.from('obras').update(payload).eq('id', editingObra.id);
         if (error) throw error;
-        setObras(prev => prev.map(o => o.id === editingObra.id ? mapObra(data) : o));
-        toast.success('Obra atualizada.');
       } else {
-        const { data, error } = await supabase.from('obras').insert(payload).select('*').single();
+        const { error } = await supabase.from('obras').insert(payload);
         if (error) throw error;
-        setObras(prev => [mapObra(data), ...prev]);
-        toast.success('Obra criada.');
       }
+      if (wantsLogin) await upsertCredential(obraForm.client_id, obraForm.username, obraForm.password);
+      toast.success(editingObra ? 'Obra salva.' : 'Obra e acesso criados.');
       setObraModal(false);
-    } catch (err) {
+      fetchAll();
+    } catch (err: any) {
       console.error(err);
-      toast.error('Não foi possível salvar a obra.');
+      toast.error(err?.message || 'Não foi possível salvar.');
     } finally { setLoading(false); }
   };
 
@@ -188,7 +211,7 @@ export const PortalManagement: React.FC = () => {
       toast.success('Obra excluída.');
     } catch (err) {
       console.error(err);
-      toast.error('Falha ao excluir obra (documentos/diários vinculados?).');
+      toast.error('Falha ao excluir obra.');
     } finally { setConfirmObra({ open: false }); }
   };
 
@@ -250,44 +273,7 @@ export const PortalManagement: React.FC = () => {
     } finally { setConfirmDoc({ open: false }); }
   };
 
-  // ----- Credentials -----
-  const [credModal, setCredModal] = useState(false);
-  const [credForm, setCredForm] = useState({ client_id: '', username: '', password: '' });
-
-  const openCredModal = (clientId?: string, username?: string) => {
-    setCredForm({ client_id: clientId || '', username: username || '', password: '' });
-    setCredModal(true);
-  };
-
-  const saveCred = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!credForm.client_id) { toast.error('Selecione o cliente.'); return; }
-    if (!credForm.username.trim()) { toast.error('Informe o usuário.'); return; }
-    if (credForm.username.trim().includes(' ')) { toast.error('O usuário não pode ter espaços.'); return; }
-    if (credForm.password.length < 6) { toast.error('Senha mínima de 6 caracteres.'); return; }
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.rpc('portal_create_credential', {
-        p_client_id: credForm.client_id,
-        p_email: credForm.username.trim().toLowerCase(),
-        p_password: credForm.password,
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.message || 'Falha');
-      await Promise.all(
-        credentials
-          .filter(c => c.clientId === credForm.client_id && c.id !== data.id)
-          .map(c => supabase.rpc('portal_set_active', { p_credential_id: c.id, p_active: false }))
-      );
-      toast.success('Login criado/atualizado.');
-      setCredModal(false);
-      fetchAll();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message || 'Não foi possível salvar o login.');
-    } finally { setLoading(false); }
-  };
-
+  // ----- Acesso (toggle / copy) -----
   const toggleCredActive = async (cred: PortalCredential) => {
     try {
       const { error } = await supabase.rpc('portal_set_active', { p_credential_id: cred.id, p_active: !cred.active });
@@ -301,108 +287,108 @@ export const PortalManagement: React.FC = () => {
   };
 
   const copyLink = async () => {
+    const link = buildPortalLink();
     try {
-      await navigator.clipboard.writeText(buildPortalLink());
-      toast.success('Link do portal copiado.');
+      await navigator.clipboard.writeText(link);
+      toast.success('Link de entrada copiado.');
     } catch {
-      toast.error('Não foi possível copiar. Link: ' + buildPortalLink());
+      toast.error('Copie manualmente: ' + link);
     }
   };
-
-  const obrasByClient = useMemo(() => {
-    const m: Record<string, Obra[]> = {};
-    obras.forEach(o => { const k = o.clientId || '—'; (m[k] = m[k] || []).push(o); });
-    return m;
-  }, [obras]);
 
   return (
     <div>
       <PageHeader
         title="Portal do Cliente"
         eyebrow="Gestão"
-        description="Obras, documentos e acessos dos clientes ao portal."
+        description="Crie o acesso do cliente, anexe documentos e fotos. Os diários entram automaticamente."
         actions={
           <div className="flex flex-wrap gap-2">
             <button onClick={copyLink} className="btn-secondary flex items-center gap-2">
-              <LinkIcon className="h-4 w-4" /> Copiar link do portal
+              <LinkIcon className="h-4 w-4" /> Copiar link de entrada
             </button>
-            {tab === 'obras' ? (
-              <button onClick={() => openObraModal()} className="btn-primary flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Nova obra
-              </button>
-            ) : (
-              <button onClick={() => openCredModal()} className="btn-primary flex items-center gap-2">
-                <KeyRound className="h-4 w-4" /> Novo acesso
-              </button>
-            )}
+            <button onClick={() => openObraModal()} className="btn-primary flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Novo acesso / obra
+            </button>
           </div>
         }
       />
 
       <FilterBar>
-        <div className="flex gap-2">
-          <button onClick={() => setTab('obras')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'obras' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>Obras &amp; Documentos</button>
-          <button onClick={() => setTab('acessos')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'acessos' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>Acessos (login)</button>
-          <button onClick={fetchAll} disabled={loading} className="ml-auto text-xs text-green-700 dark:text-green-300 hover:underline disabled:opacity-50">{loading ? 'Atualizando...' : 'Atualizar'}</button>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Cada obra tem um cliente, um login e seus documentos. Diários aparecem sozinhos pelo cliente da obra.</p>
+          <button onClick={fetchAll} disabled={loading} className="text-xs text-green-700 dark:text-green-300 hover:underline disabled:opacity-50">{loading ? 'Atualizando...' : 'Atualizar'}</button>
         </div>
       </FilterBar>
 
-      {tab === 'obras' && (
-        <div className="space-y-3">
-          {obras.length === 0 && (
-            <Surface><div className="p-6 text-sm text-gray-500 dark:text-gray-400">Nenhuma obra cadastrada. Clique em "Nova obra".</div></Surface>
-          )}
-          {obras.map((o) => {
-            const docs = docsByObra[o.id] || [];
-            const isOpen = expanded === o.id;
-            return (
-              <Surface key={o.id}>
-                <div className="p-4 sm:p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <button onClick={() => toggleExpand(o.id)} className="flex items-start gap-3 text-left min-w-0 flex-1">
-                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Building2 className="text-green-600 dark:text-green-400 w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          {isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
-                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                            {o.obraCode ? `${o.obraCode} — ` : ''}{o.name}
-                          </h3>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{clientName(o.clientId)}{o.address ? ` · ${o.address}` : ''}</p>
-                      </div>
-                    </button>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <StatusBadge variant={o.status === 'ativa' ? 'success' : o.status === 'concluida' ? 'info' : 'neutral'}>{o.status}</StatusBadge>
-                      <IconButton icon={Edit} label="Editar" tone="primary" onClick={() => openObraModal(o)} />
-                      <IconButton icon={Trash2} label="Excluir" tone="danger" onClick={() => setConfirmObra({ open: true, id: o.id, name: o.name })} />
+      <div className="space-y-3">
+        {obras.length === 0 && (
+          <Surface><div className="p-6 text-sm text-gray-500 dark:text-gray-400">Nenhuma obra. Clique em "Novo acesso / obra" para começar.</div></Surface>
+        )}
+        {obras.map((o) => {
+          const docs = docsByObra[o.id] || [];
+          const diaries = diariesByObra[o.id] || [];
+          const cred = credByClient(o.clientId);
+          const isOpen = expanded === o.id;
+          return (
+            <Surface key={o.id}>
+              <div className="p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <button onClick={() => toggleExpand(o)} className="flex items-start gap-3 text-left min-w-0 flex-1">
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Building2 className="text-green-600 dark:text-green-400 w-5 h-5" />
                     </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">{o.obraCode ? `${o.obraCode} — ` : ''}{o.name}</h3>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {clientName(o.clientId)}
+                        {cred ? ` · login: ${cred.email}` : ' · sem login'}
+                      </p>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {cred && <StatusBadge variant={cred.active ? 'success' : 'neutral'}>{cred.active ? 'ativo' : 'inativo'}</StatusBadge>}
+                    <IconButton icon={Edit} label="Editar obra/login" tone="primary" onClick={() => openObraModal(o)} />
+                    <IconButton icon={Trash2} label="Excluir" tone="danger" onClick={() => setConfirmObra({ open: true, id: o.id, name: o.name })} />
                   </div>
+                </div>
 
-                  {isOpen && (
-                    <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Documentos ({docs.length})</h4>
-                        <button onClick={() => openDocModal(o.id)} className="btn-secondary flex items-center gap-2 text-sm">
-                          <Upload className="h-4 w-4" /> Enviar documento
+                {isOpen && (
+                  <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 space-y-5">
+                    {/* Acesso */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button onClick={copyLink} className="btn-secondary flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4" /> Copiar link</button>
+                      <button onClick={() => openObraModal(o)} className="btn-secondary flex items-center gap-2 text-sm"><KeyRound className="h-4 w-4" /> {cred ? 'Editar login' : 'Criar login'}</button>
+                      {cred && (
+                        <button onClick={() => toggleCredActive(cred)} className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg ${cred.active ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}>
+                          {cred.active ? <><XCircle className="h-4 w-4" /> Inativar acesso</> : <><CheckCircle2 className="h-4 w-4" /> Ativar acesso</>}
                         </button>
+                      )}
+                      {cred?.lastLoginAt && <span className="text-xs text-gray-400">Último acesso: {new Date(cred.lastLoginAt).toLocaleString('pt-BR')}</span>}
+                    </div>
+
+                    {/* Documentos */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Documentos e fotos ({docs.length})</h4>
+                        <button onClick={() => openDocModal(o.id)} className="btn-secondary flex items-center gap-2 text-sm"><Upload className="h-4 w-4" /> Anexar</button>
                       </div>
                       {docs.length === 0 ? (
-                        <p className="text-sm text-gray-400">Nenhum documento enviado.</p>
+                        <p className="text-sm text-gray-400">Nada anexado ainda.</p>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {docs.map(d => (
                             <div key={d.id} className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2">
-                              <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              {isImage(d.fileType) ? <ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" /> : <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />}
                               <div className="min-w-0 flex-1">
                                 <a href={d.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-gray-900 dark:text-white hover:underline truncate block">{d.title}</a>
                                 <p className="text-[11px] text-gray-500">{categoryLabel(d.category, d.customLabel)}</p>
                               </div>
                               {d.requiresSignature && (
-                                <StatusBadge variant={d.signatureStatus === 'signed' ? 'success' : 'warning'}>
-                                  {d.signatureStatus === 'signed' ? 'assinado' : 'p/ assinar'}
-                                </StatusBadge>
+                                <StatusBadge variant={d.signatureStatus === 'signed' ? 'success' : 'warning'}>{d.signatureStatus === 'signed' ? 'assinado' : 'p/ assinar'}</StatusBadge>
                               )}
                               <IconButton icon={Trash2} label="Remover" tone="danger" onClick={() => setConfirmDoc({ open: true, doc: d })} />
                             </div>
@@ -410,59 +396,59 @@ export const PortalManagement: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </Surface>
-            );
-          })}
-        </div>
-      )}
 
-      {tab === 'acessos' && (
-        <div className="space-y-3">
-          {clients.length === 0 && (
-            <Surface><div className="p-6 text-sm text-gray-500 dark:text-gray-400">Nenhum cliente cadastrado. Crie clientes em "Clientes".</div></Surface>
-          )}
-          {clients.map((cl) => {
-            const cred = credentials.find(c => c.clientId === cl.id);
-            const clObras = obrasByClient[cl.id] || [];
-            return (
-              <Surface key={cl.id}>
-                <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">{cl.name}</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {cred ? `Usuário: ${cred.email}` : 'Sem login cadastrado'} · {clObras.length} obra(s)
-                      {cred?.lastLoginAt ? ` · Último acesso: ${new Date(cred.lastLoginAt).toLocaleString('pt-BR')}` : ''}
-                    </p>
+                    {/* Diários (automático) */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Diários da obra ({diaries.length}) <span className="font-normal text-xs text-gray-400">— automático pelo cliente</span></h4>
+                      {diaries.length === 0 ? (
+                        <p className="text-sm text-gray-400">Nenhum diário deste cliente ainda.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {diaries.slice(0, 8).map(d => (
+                            <div key={d.id} className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                              <span className="font-medium">{d.diary_type}</span>
+                              <span className="text-gray-400">{d.date ? new Date(d.date).toLocaleDateString('pt-BR') : '-'}</span>
+                              <span className="truncate text-gray-400">{d.services}</span>
+                              {d.status === 'signed' && <StatusBadge variant="success">assinado</StatusBadge>}
+                            </div>
+                          ))}
+                          {diaries.length > 8 && <p className="text-xs text-gray-400">+{diaries.length - 8} diário(s)</p>}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {cred && (
-                      <StatusBadge variant={cred.active ? 'success' : 'neutral'}>{cred.active ? 'ativo' : 'inativo'}</StatusBadge>
-                    )}
-                    {cred && (
-                      <button onClick={() => toggleCredActive(cred)} className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg ${cred.active ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}>
-                        {cred.active ? <><XCircle className="h-4 w-4" /> Inativar</> : <><CheckCircle2 className="h-4 w-4" /> Ativar</>}
-                      </button>
-                    )}
-                    <button onClick={() => openCredModal(cl.id, cred?.email)} className="btn-secondary flex items-center gap-2 text-sm">
-                      <KeyRound className="h-4 w-4" /> {cred ? 'Editar login' : 'Criar login'}
-                    </button>
-                  </div>
-                </div>
-              </Surface>
-            );
-          })}
-        </div>
-      )}
+                )}
+              </div>
+            </Surface>
+          );
+        })}
+      </div>
 
-      {/* Obra modal */}
-      <Modal open={obraModal} onClose={() => setObraModal(false)} title={editingObra ? 'Editar obra' : 'Nova obra'}>
+      {/* Obra + Acesso modal */}
+      <Modal open={obraModal} onClose={() => setObraModal(false)} title={editingObra ? 'Editar obra e acesso' : 'Novo acesso / obra'} size="lg">
         <form onSubmit={saveObra} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Cliente *</label>
+            <select value={obraForm.client_id} onChange={e => setObraForm(f => ({ ...f, client_id: e.target.value }))} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100">
+              <option value="">Selecione...</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Código da obra</label>
               <input value={obraForm.obra_code} onChange={e => setObraForm(f => ({ ...f, obra_code: e.target.value }))} placeholder="G26003" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Nome da obra *</label>
+              <input value={obraForm.name} onChange={e => setObraForm(f => ({ ...f, name: e.target.value }))} placeholder="Construtora Ápia - Mariana" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Endereço</label>
+              <input value={obraForm.address} onChange={e => setObraForm(f => ({ ...f, address: e.target.value }))} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Status</label>
@@ -473,21 +459,22 @@ export const PortalManagement: React.FC = () => {
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Nome da obra *</label>
-            <input value={obraForm.name} onChange={e => setObraForm(f => ({ ...f, name: e.target.value }))} placeholder="Construtora Ápia - Mariana" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
+
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"><KeyRound className="h-4 w-4" /> Acesso do cliente {editingObra ? '(deixe a senha vazia para manter)' : '(opcional)'}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Usuário / login</label>
+                <input value={obraForm.username} onChange={e => setObraForm(f => ({ ...f, username: e.target.value }))} placeholder="ex: construtora-apia" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Senha inicial</label>
+                <input type="text" value={obraForm.password} onChange={e => setObraForm(f => ({ ...f, password: e.target.value }))} placeholder="mínimo 6 caracteres" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">O login vale para todas as obras deste cliente. Anote e envie usuário + senha ao cliente.</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Cliente *</label>
-            <select value={obraForm.client_id} onChange={e => setObraForm(f => ({ ...f, client_id: e.target.value }))} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100">
-              <option value="">Selecione...</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Endereço</label>
-            <input value={obraForm.address} onChange={e => setObraForm(f => ({ ...f, address: e.target.value }))} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
-          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setObraModal(false)} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={loading} className="btn-primary">{editingObra ? 'Salvar' : 'Criar'}</button>
@@ -496,7 +483,7 @@ export const PortalManagement: React.FC = () => {
       </Modal>
 
       {/* Document modal */}
-      <Modal open={docModal.open} onClose={() => setDocModal({ open: false })} title="Enviar documento">
+      <Modal open={docModal.open} onClose={() => setDocModal({ open: false })} title="Anexar documento ou foto">
         <form onSubmit={saveDoc} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Categoria</label>
@@ -525,33 +512,7 @@ export const PortalManagement: React.FC = () => {
           </label>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setDocModal({ open: false })} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={uploading} className="btn-primary">{uploading ? 'Enviando...' : 'Enviar'}</button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Credential modal */}
-      <Modal open={credModal} onClose={() => setCredModal(false)} title="Acesso ao portal">
-        <form onSubmit={saveCred} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Cliente *</label>
-            <select value={credForm.client_id} onChange={e => setCredForm(f => ({ ...f, client_id: e.target.value }))} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100">
-              <option value="">Selecione...</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Usuário *</label>
-            <input value={credForm.username} onChange={e => setCredForm(f => ({ ...f, username: e.target.value }))} placeholder="Digite o usuário do cliente" autoFocus className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Senha *</label>
-            <input type="text" value={credForm.password} onChange={e => setCredForm(f => ({ ...f, password: e.target.value }))} placeholder="Digite uma senha temporária" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
-            <p className="mt-1 text-xs text-gray-500">Envie o usuário e a senha ao cliente. Você pode redefinir depois.</p>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setCredModal(false)} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={loading} className="btn-primary">Salvar login</button>
+            <button type="submit" disabled={uploading} className="btn-primary">{uploading ? 'Enviando...' : 'Anexar'}</button>
           </div>
         </form>
       </Modal>
