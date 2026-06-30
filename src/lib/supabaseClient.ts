@@ -15,4 +15,17 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl as string, supabaseAnonKey as string)
   : (null as unknown as ReturnType<typeof createClient>);
 
+// Client isolado (sem persistir sessão) para o admin criar usuários via signUp
+// sem que a sessão do admin atual seja substituída pela do novo usuário.
+export const createIsolatedAuthClient = () =>
+  isSupabaseConfigured
+    ? createClient(supabaseUrl as string, supabaseAnonKey as string, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          storageKey: 'sb-admin-create-temp',
+        },
+      })
+    : (null as unknown as ReturnType<typeof createClient>);
+
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, User, Mail, Shield, ShieldCheck, Edit, Trash2, Phone, Camera, Loader2, X } from 'lucide-react';
 import { User as UserType } from '../types';
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { supabase, isSupabaseConfigured, createIsolatedAuthClient } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { TableSkeleton, UserCardSkeleton } from './SkeletonLoader';
@@ -285,8 +285,9 @@ export const UsersManagement: React.FC = () => {
         ));
         toast.success('Usuário atualizado com sucesso!');
       } else {
-        // Criar novo usuário via Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        // Criar novo usuário via client isolado (não substitui a sessão do admin)
+        const authClient = createIsolatedAuthClient();
+        const { data: authData, error: authError } = await authClient.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
@@ -311,8 +312,9 @@ export const UsersManagement: React.FC = () => {
             .eq('id', authData.user.id)
             .single();
 
-          // Atualizar perfil com campos de colaborador
+          // Atualizar perfil com campos de colaborador (garante o cargo escolhido)
           const updateData: any = {
+            role: formData.role,
             phone: formData.phone.trim() || null,
             collaborator_role: formData.collaboratorRole.trim() || null,
             collaborator_status: formData.collaboratorStatus,

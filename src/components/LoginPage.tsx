@@ -200,18 +200,9 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccess(''); }}
-              className="text-sm text-gray-600 underline-offset-4 hover:text-gray-900 hover:underline dark:text-gray-300 dark:hover:text-white"
-            >
-              {isSignUp ? 'Já tem conta? Fazer login' : 'Não tem conta? Criar conta'}
-            </button>
-          </div>
-
           <p className="mt-5 text-center text-xs leading-relaxed text-gray-400 dark:text-gray-500">
-            Acesso destinado a usuários autorizados pela Geoteste.
+            Acesso destinado a usuários autorizados pela Geoteste.<br />
+            Novos acessos são criados pelo administrador.
           </p>
         </div>
       </div>

@@ -41,10 +41,14 @@ begin
   insert into public.profiles (id, name, email, role)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', 'Usuário'),
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'Usuário'),
     new.email,
-    'user'
-  );
+    coalesce(nullif(new.raw_user_meta_data->>'role',''), 'user')
+  )
+  on conflict (id) do update
+    set role = coalesce(nullif(excluded.role,''), public.profiles.role),
+        name = excluded.name,
+        email = excluded.email;
   return new;
 end;
 $$ language plpgsql security definer;
