@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Plus, Building2, Edit, Trash2, Link as LinkIcon, KeyRound, Upload, FileText,
-  CheckCircle2, XCircle, ChevronDown, ChevronRight, Paperclip, PenLine, Calendar, Image as ImageIcon,
+  CheckCircle2, XCircle, ChevronDown, ChevronRight, Paperclip, PenLine, Calendar, Image as ImageIcon, Lock,
 } from 'lucide-react';
 import { Client, Obra, ObraDocument, ObraDocumentCategory, PortalCredential } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import ConfirmDialog from './ConfirmDialog';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { FilterBar, IconButton, Modal, PageHeader, StatusBadge, Surface } from './ui';
@@ -41,7 +42,8 @@ const buildPortalLink = (): string => {
 
 const mapObra = (r: any): Obra => ({
   id: r.id, obraCode: r.obra_code, name: r.name, clientId: r.client_id,
-  address: r.address, status: r.status, createdAt: r.created_at, updatedAt: r.updated_at,
+  address: r.address, status: r.status, confidential: !!r.confidential,
+  createdAt: r.created_at, updatedAt: r.updated_at,
 });
 
 const mapDoc = (r: any): ObraDocument => ({
@@ -61,6 +63,8 @@ interface DiaryLite { id: string; date: string; diary_type: string; services: st
 
 export const PortalManagement: React.FC = () => {
   const toast = useToast();
+  const { user } = useAuth();
+  const [isSuper, setIsSuper] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [credentials, setCredentials] = useState<PortalCredential[]>([]);
@@ -100,6 +104,13 @@ export const PortalManagement: React.FC = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
+  // detecta ADM global (super admin)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !user?.id) { setIsSuper(false); return; }
+    supabase.from('profiles').select('is_super_admin').eq('id', user.id).maybeSingle()
+      .then(({ data }) => setIsSuper(!!data?.is_super_admin));
+  }, [user?.id]);
+
   const fetchDocs = async (obraId: string) => {
     const { data, error } = await supabase
       .from('obra_documents').select('*').eq('obra_id', obraId).order('created_at', { ascending: false });
@@ -138,16 +149,16 @@ export const PortalManagement: React.FC = () => {
   // ----- Obra + Acesso modal (fluxo unificado) -----
   const [obraModal, setObraModal] = useState(false);
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
-  const [obraForm, setObraForm] = useState({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa', username: '', password: '' });
+  const [obraForm, setObraForm] = useState({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa', confidential: false, username: '', password: '' });
 
   const openObraModal = (o?: Obra) => {
     if (o) {
       const cred = credByClient(o.clientId);
       setEditingObra(o);
-      setObraForm({ obra_code: o.obraCode || '', name: o.name, client_id: o.clientId || '', address: o.address || '', status: o.status, username: cred?.email || '', password: '' });
+      setObraForm({ obra_code: o.obraCode || '', name: o.name, client_id: o.clientId || '', address: o.address || '', status: o.status, confidential: !!o.confidential, username: cred?.email || '', password: '' });
     } else {
       setEditingObra(null);
-      setObraForm({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa', username: '', password: '' });
+      setObraForm({ obra_code: '', name: '', client_id: '', address: '', status: 'ativa', confidential: false, username: '', password: '' });
     }
     setObraModal(true);
   };
@@ -181,6 +192,7 @@ export const PortalManagement: React.FC = () => {
       client_id: obraForm.client_id,
       address: obraForm.address.trim() || null,
       status: obraForm.status,
+      confidential: isSuper ? obraForm.confidential : false,
     };
     try {
       setLoading(true);
@@ -342,6 +354,9 @@ export const PortalManagement: React.FC = () => {
                       <div className="flex items-center gap-2">
                         {isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
                         <h3 className="font-semibold text-gray-900 dark:text-white truncate">{o.obraCode ? `${o.obraCode} — ` : ''}{o.name}</h3>
+                        {o.confidential && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 text-[10px] font-semibold flex-shrink-0"><Lock className="h-3 w-3" /> Confidencial</span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {clientName(o.clientId)}
@@ -459,6 +474,16 @@ export const PortalManagement: React.FC = () => {
               </select>
             </div>
           </div>
+
+          {isSuper && (
+            <label className="flex items-start gap-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 cursor-pointer">
+              <input type="checkbox" checked={obraForm.confidential} onChange={e => setObraForm(f => ({ ...f, confidential: e.target.checked }))} className="mt-0.5 rounded text-amber-600" />
+              <span className="text-sm text-amber-800 dark:text-amber-200">
+                <span className="font-semibold flex items-center gap-1"><Lock className="h-4 w-4" /> Obra confidencial</span>
+                Só ADM global vê e edita no painel. O cliente continua vendo normalmente no portal.
+              </span>
+            </label>
+          )}
 
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-3">
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"><KeyRound className="h-4 w-4" /> Acesso do cliente {editingObra ? '(deixe a senha vazia para manter)' : '(opcional)'}</p>

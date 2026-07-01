@@ -129,6 +129,7 @@ export interface Obra {
   clientId?: string | null;
   address?: string | null;
   status: 'ativa' | 'concluida' | 'inativa';
+  confidential?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
