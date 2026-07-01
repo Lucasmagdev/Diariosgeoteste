@@ -160,6 +160,47 @@ export interface PortalCredential {
   lastLoginAt?: string | null;
 }
 
+export interface ChecklistTemplateItem {
+  id: string;
+  templateId: string;
+  position: number;
+  text: string;
+  required: boolean;
+  requiresPhoto: boolean;
+}
+
+export interface ChecklistTemplate {
+  id: string;
+  name: string;
+  description?: string | null;
+  createdAt: string;
+  items: ChecklistTemplateItem[];
+}
+
+export interface ObraChecklistItem {
+  id: string;
+  position: number;
+  text: string;
+  required: boolean;
+  requiresPhoto: boolean;
+  checked: boolean;
+  photoData?: string | null;
+  note?: string | null;
+}
+
+export interface ObraChecklist {
+  id: string;
+  obraId: string;
+  templateId?: string | null;
+  title: string;
+  status: 'pending' | 'completed';
+  signatureUrl?: string | null;
+  signedAt?: string | null;
+  signedBy?: string | null;
+  createdAt: string;
+  items: ObraChecklistItem[];
+}
+
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; code?: string; message?: string }>;
