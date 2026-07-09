@@ -22,6 +22,8 @@ interface DiariesListProps {
   onNewDiary: () => void;
 }
 
+const DEFAULT_PUBLIC_APP_URL = 'https://geotestegf.netlify.app';
+
 // Função para formatar endereço: usar "S/R" se rua vazia, "S/N" se número vazio
 const formatAddress = (address: string | null | undefined, enderecoDetalhado: any): string => {
   // Se houver endereço detalhado, montar a partir dele
@@ -64,13 +66,12 @@ const buildPublicSignatureLink = (token: string): string => {
     try {
       url = new URL(configuredPublicUrl);
     } catch {
-      console.warn('VITE_PUBLIC_APP_URL inválida, usando URL atual da aplicação.');
+      console.warn('VITE_PUBLIC_APP_URL invalida, usando dominio publico padrao.');
     }
   }
 
   if (!url) {
-    const baseUrl = (import.meta.env.BASE_URL as string | undefined) || '/';
-    url = new URL(baseUrl, window.location.origin);
+    url = new URL(DEFAULT_PUBLIC_APP_URL);
   }
 
   url.searchParams.set('assinar', token);
@@ -728,9 +729,6 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
         toast.success('Link de assinatura criado.');
       }
 
-      if (link.includes('localhost') || link.includes('127.0.0.1')) {
-        toast.warning('Link gerado em localhost. Defina VITE_PUBLIC_APP_URL com seu domínio público.');
-      }
     } catch (err) {
       console.error('Erro ao gerar link de assinatura:', err);
       const msg = String((err as any)?.message || '').toLowerCase();

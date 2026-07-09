@@ -142,6 +142,7 @@ export interface ObraDocument {
   title: string;
   fileUrl: string;
   fileType?: string | null;
+  relatorioPin?: string | null;
   requiresSignature: boolean;
   signatureUrl?: string | null;
   signedAt?: string | null;

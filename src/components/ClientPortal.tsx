@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Building2, FileText, LogOut, ShieldCheck, ChevronLeft, ChevronRight, PenLine, CheckCircle2,
-  Calendar, Download, FolderOpen, ListChecks, Camera, X, AlertTriangle,
+  Calendar, Download, FolderOpen, ListChecks, Camera, X, AlertTriangle, Lock,
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { SignaturePadFixed } from './SignaturePadFixed';
@@ -91,6 +91,12 @@ export const ClientPortal: React.FC = () => {
   const [clSubmitting, setClSubmitting] = useState(false);
   const [clError, setClError] = useState('');
   const [viewChecklist, setViewChecklist] = useState<any | null>(null);
+
+  // locked document (PIN) state
+  const [pinTarget, setPinTarget] = useState<{ id: string; title: string } | null>(null);
+  const [pinValue, setPinValue] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinSubmitting, setPinSubmitting] = useState(false);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -194,6 +200,30 @@ export const ClientPortal: React.FC = () => {
     } catch (err) {
       console.error('sign', err);
     } finally { setSubmitting(false); }
+  };
+
+  const openDocument = (d: any) => {
+    if (d.locked) { setPinTarget({ id: d.id, title: d.title }); setPinValue(''); setPinError(''); return; }
+    window.open(d.file_url, '_blank', 'noopener,noreferrer');
+  };
+
+  const submitPin = async () => {
+    if (!pinTarget) return;
+    if (!pinValue.trim()) { setPinError('Informe o PIN.'); return; }
+    try {
+      setPinSubmitting(true);
+      setPinError('');
+      const { data: res, error } = await supabase.rpc('portal_open_document', {
+        p_token: token, p_doc_id: pinTarget.id, p_pin: pinValue.trim(),
+      });
+      if (error) throw error;
+      if (!res?.ok) { setPinError('PIN incorreto.'); return; }
+      window.open(res.file_url, '_blank', 'noopener,noreferrer');
+      setPinTarget(null);
+    } catch (err) {
+      console.error('open document', err);
+      setPinError('Não foi possível abrir o documento.');
+    } finally { setPinSubmitting(false); }
   };
 
   // ---------- CHECKLIST ----------
@@ -476,10 +506,15 @@ export const ClientPortal: React.FC = () => {
                       <div key={d.id} className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
                         <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{d.title}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate flex items-center gap-1">
+                            {d.title}
+                            {d.locked && <Lock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
+                          </p>
                           <p className="text-xs text-gray-500">{docLabel(d.category, d.custom_label)}</p>
                         </div>
-                        <a href={d.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300 hover:underline"><Download className="h-4 w-4" /> Abrir</a>
+                        <button onClick={() => openDocument(d)} className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300 hover:underline">
+                          {d.locked ? <><Lock className="h-4 w-4" /> Abrir</> : <><Download className="h-4 w-4" /> Abrir</>}
+                        </button>
                         {d.requires_signature && (d.signature_status === 'signed'
                           ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Assinado</span>
                           : <button onClick={() => openSign({ kind: 'document', id: d.id, title: d.title })} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800">Assinar</button>
@@ -633,6 +668,33 @@ export const ClientPortal: React.FC = () => {
                 <img src={viewChecklist.signature_url} alt="Assinatura" className="max-h-24 rounded-lg border border-gray-200 dark:border-gray-800 bg-white" />
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* PIN modal (documentos "relatorio" bloqueados) */}
+      {pinTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && setPinTarget(null)}>
+          <div className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-900 p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="rounded-xl bg-amber-50 p-2 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300"><Lock className="h-5 w-5" /></div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{pinTarget.title}</h3>
+            </div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">PIN de acesso</label>
+            <input
+              value={pinValue}
+              onChange={e => setPinValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onKeyDown={e => e.key === 'Enter' && submitPin()}
+              inputMode="numeric"
+              autoFocus
+              className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3.5 py-3 text-gray-900 dark:text-gray-100 mb-2"
+              placeholder="Digite o PIN"
+            />
+            {pinError && <p className="text-xs text-red-600 mb-2">{pinError}</p>}
+            <div className="flex justify-end gap-2 mt-2">
+              <button onClick={() => setPinTarget(null)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">Cancelar</button>
+              <button onClick={submitPin} disabled={pinSubmitting || !pinValue.trim()} className="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">Abrir</button>
+            </div>
           </div>
         </div>
       )}

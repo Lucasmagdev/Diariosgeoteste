@@ -29,13 +29,15 @@ const categoryLabel = (c: ObraDocumentCategory, custom?: string | null) =>
 
 const isImage = (t?: string | null) => !!t && t.startsWith('image');
 
+const DEFAULT_PUBLIC_APP_URL = 'https://geotestegf.netlify.app';
+
 const buildPortalLink = (): string => {
   const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();
   let url: URL;
   try {
-    url = configured ? new URL(configured) : new URL(import.meta.env.BASE_URL || '/', window.location.origin);
+    url = new URL(configured || DEFAULT_PUBLIC_APP_URL);
   } catch {
-    url = new URL('/', window.location.origin);
+    url = new URL(DEFAULT_PUBLIC_APP_URL);
   }
   url.searchParams.set('portal', '1');
   return url.toString();
@@ -50,6 +52,7 @@ const mapObra = (r: any): Obra => ({
 const mapDoc = (r: any): ObraDocument => ({
   id: r.id, obraId: r.obra_id, category: r.category, customLabel: r.custom_label,
   title: r.title, fileUrl: r.file_url, fileType: r.file_type,
+  relatorioPin: r.relatorio_pin || null,
   requiresSignature: !!r.requires_signature, signatureUrl: r.signature_url,
   signedAt: r.signed_at, signedBy: r.signed_by, signedCpf: r.signed_cpf,
   signatureStatus: r.signature_status, createdAt: r.created_at,
@@ -288,13 +291,13 @@ export const PortalManagement: React.FC = () => {
   // ----- Document upload -----
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [docModal, setDocModal] = useState<{ open: boolean; obraId?: string }>({ open: false });
-  const [docForm, setDocForm] = useState<{ category: ObraDocumentCategory; customLabel: string; title: string; requiresSignature: boolean; file: File | null }>(
-    { category: 'contrato', customLabel: '', title: '', requiresSignature: false, file: null }
+  const [docForm, setDocForm] = useState<{ category: ObraDocumentCategory; customLabel: string; title: string; relatorioPin: string; requiresSignature: boolean; file: File | null }>(
+    { category: 'contrato', customLabel: '', title: '', relatorioPin: '', requiresSignature: false, file: null }
   );
   const [uploading, setUploading] = useState(false);
 
   const openDocModal = (obraId: string) => {
-    setDocForm({ category: 'contrato', customLabel: '', title: '', requiresSignature: false, file: null });
+    setDocForm({ category: 'contrato', customLabel: '', title: '', relatorioPin: '', requiresSignature: false, file: null });
     setDocModal({ open: true, obraId });
   };
 
@@ -303,6 +306,8 @@ export const PortalManagement: React.FC = () => {
     const obraId = docModal.obraId!;
     if (!docForm.file) { toast.error('Selecione um arquivo.'); return; }
     if (docForm.category === 'outro' && !docForm.customLabel.trim()) { toast.error('Descreva o tipo (campo Outro).'); return; }
+    const relatorioPin = docForm.category === 'relatorio' ? docForm.relatorioPin.trim() : '';
+    if (relatorioPin && !/^\d{4,6}$/.test(relatorioPin)) { toast.error('PIN do relatório deve ter 4 a 6 dígitos.'); return; }
     try {
       setUploading(true);
       const up = await uploadPortalDoc(docForm.file, obraId);
@@ -314,6 +319,7 @@ export const PortalManagement: React.FC = () => {
         title,
         file_url: up.url,
         file_type: up.fileType,
+        relatorio_pin: relatorioPin || null,
         requires_signature: docForm.requiresSignature,
         signature_status: docForm.requiresSignature ? 'pending' : 'na',
       }).select('*').single();
@@ -624,7 +630,12 @@ export const PortalManagement: React.FC = () => {
                               {isImage(d.fileType) ? <ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" /> : <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />}
                               <div className="min-w-0 flex-1">
                                 <a href={d.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-gray-900 dark:text-white hover:underline truncate block">{d.title}</a>
-                                <p className="text-[11px] text-gray-500">{categoryLabel(d.category, d.customLabel)}</p>
+                                <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                                  {categoryLabel(d.category, d.customLabel)}
+                                  {d.category === 'relatorio' && !!d.relatorioPin && (
+                                    <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400"><Lock className="h-3 w-3" /> PIN no portal</span>
+                                  )}
+                                </p>
                               </div>
                               {d.requiresSignature && (
                                 <StatusBadge variant={d.signatureStatus === 'signed' ? 'success' : 'warning'}>{d.signatureStatus === 'signed' ? 'assinado' : 'p/ assinar'}</StatusBadge>
@@ -779,6 +790,19 @@ export const PortalManagement: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Título (opcional)</label>
             <input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} placeholder="Usa o nome do arquivo se vazio" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100" />
           </div>
+          {docForm.category === 'relatorio' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> PIN deste relatorio (opcional)</label>
+              <input
+                value={docForm.relatorioPin}
+                onChange={e => setDocForm(f => ({ ...f, relatorioPin: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                placeholder="4 a 6 digitos"
+                inputMode="numeric"
+                className="w-full sm:w-48 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-gray-900 dark:text-gray-100"
+              />
+              <p className="text-xs text-gray-400 mt-1">Se preenchido, o cliente precisa digitar esse PIN para abrir somente este arquivo.</p>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Arquivo (PDF, JPG, PNG) *</label>
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e => setDocForm(f => ({ ...f, file: e.target.files?.[0] || null }))} className="w-full text-sm text-gray-700 dark:text-gray-200 file:mr-3 file:rounded-lg file:border-0 file:bg-green-600 file:px-3 file:py-2 file:text-white" />
