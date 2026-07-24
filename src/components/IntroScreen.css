@@ -1,0 +1,136 @@
+/* ===== Geoteste — Intro cinematográfica (admin) ===== */
+
+.sjg-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #050a08;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.7s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sjg-intro--fade {
+  opacity: 0;
+}
+
+.sjg-intro__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+.sjg-intro__stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  width: 100%;
+  max-width: 720px;
+  text-align: center;
+}
+
+/* ---- Logo ---- */
+.sjg-intro__logo-wrap {
+  position: relative;
+  width: clamp(160px, 42vw, 300px);
+  height: auto;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.sjg-intro__logo-wrap--in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sjg-intro__logo {
+  width: 100%;
+  height: auto;
+  display: block;
+  /* Scan reveal left -> right */
+  clip-path: inset(0 100% 0 0);
+  filter: brightness(1.08) contrast(1.04)
+    drop-shadow(0 0 24px rgba(16, 185, 129, 0.18));
+}
+
+.sjg-intro__logo-fallback {
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: clamp(28px, 7vw, 52px);
+  color: #ecfdf5;
+  text-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
+}
+
+/* ---- Underline ---- */
+.sjg-intro__underline {
+  position: relative;
+  margin-top: 18px;
+  height: 2px;
+  width: clamp(140px, 36vw, 260px);
+  background: linear-gradient(
+    90deg,
+    rgba(16, 185, 129, 0) 0%,
+    #10b981 20%,
+    #047857 80%,
+    rgba(4, 120, 87, 0) 100%
+  );
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.5);
+  border-radius: 2px;
+}
+
+.sjg-intro__underline--in {
+  transform: scaleX(1);
+}
+
+/* ---- Tagline ---- */
+.sjg-intro__tagline {
+  margin-top: 20px;
+  min-height: 1.4em;
+  font-family: "SFMono-Regular", "Consolas", "Roboto Mono", ui-monospace,
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.42em;
+  font-size: clamp(11px, 2.4vw, 15px);
+  color: rgba(236, 253, 245, 0.92);
+  text-indent: 0.42em; /* compensa letter-spacing à direita */
+  white-space: nowrap;
+}
+
+.sjg-intro__cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: #10b981;
+  animation: sjg-blink 0.9s steps(1) infinite;
+}
+
+@keyframes sjg-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sjg-intro__cursor {
+    animation: none;
+  }
+}

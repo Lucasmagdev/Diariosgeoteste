@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { LoginPage } from './components/LoginPage';
@@ -18,6 +18,9 @@ import { EquipmentMap } from './components/EquipmentMap';
 import { PublicDiarySignature } from './components/PublicDiarySignature';
 import { PortalManagement } from './components/PortalManagement';
 import { ClientPortal } from './components/ClientPortal';
+import { IntroScreen } from './components/IntroScreen';
+
+const INTRO_KEY = 'geoteste-admin-intro-seen';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -33,6 +36,21 @@ const AppContent: React.FC = () => {
     () => new URLSearchParams(window.location.search).get('portal') != null,
     []
   );
+
+  // Intro cinematográfica: apenas na área admin (interna), uma vez por sessão.
+  // ?introPreview=1 força replay.
+  const isAdminArea = !isClientPortalPage && !isPublicSignaturePage;
+  const [showIntro, setShowIntro] = useState(() => {
+    if (!isAdminArea) return false;
+    const forceIntro = new URLSearchParams(window.location.search).get('introPreview') === '1';
+    const alreadySeen = sessionStorage.getItem(INTRO_KEY) === '1';
+    return forceIntro || !alreadySeen;
+  });
+
+  const handleIntroDone = useCallback(() => {
+    sessionStorage.setItem(INTRO_KEY, '1');
+    setShowIntro(false);
+  }, []);
 
   // Mostrar splash screen apenas na primeira vez e se for PWA ou mobile
   useEffect(() => {
@@ -61,6 +79,10 @@ const AppContent: React.FC = () => {
 
   if (isPublicSignaturePage) {
     return <PublicDiarySignature token={signatureToken} />;
+  }
+
+  if (showIntro) {
+    return <IntroScreen onDone={handleIntroDone} />;
   }
 
   if (showSplash) {
