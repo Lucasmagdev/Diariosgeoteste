@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, User, Mail, Shield, ShieldCheck, Edit, Trash2, Phone, Camera, Loader2, X } from 'lucide-react';
+import { Search, Plus, User, Mail, Shield, ShieldCheck, Crown, Edit, Trash2, Phone, Camera, Loader2, X } from 'lucide-react';
 import { User as UserType } from '../types';
 import { supabase, isSupabaseConfigured, createIsolatedAuthClient } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
@@ -94,6 +94,7 @@ export const UsersManagement: React.FC = () => {
             email: email || 'email@exemplo.com',
             role: profile.role || 'user',
             createdAt: profile.created_at || new Date().toISOString(),
+            isSuperAdmin: !!profile.is_super_admin,
             photoUrl: profile.photo_url || null,
             phone: profile.phone || null,
             collaboratorRole: profile.collaborator_role || null,
@@ -490,10 +491,10 @@ export const UsersManagement: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr key={user.id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${user.isSuperAdmin ? 'bg-amber-50/60 dark:bg-amber-900/10' : ''}`}>
                     <td className="py-3 lg:py-4 px-4 lg:px-6">
                       <div className="flex items-center space-x-2 lg:space-x-3">
-                        <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full overflow-hidden bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 border-2 border-green-200 dark:border-green-700">
+                        <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full overflow-hidden bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 border-2 ${user.isSuperAdmin ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-200 dark:ring-amber-800' : 'border-green-200 dark:border-green-700'}`}>
                           {user.photoUrl ? (
                             <img
                               src={user.photoUrl}
@@ -514,7 +515,13 @@ export const UsersManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3 lg:py-4 px-4 lg:px-6">
-                      {user.role === 'admin' ? (
+                      {user.isSuperAdmin ? (
+                        <span className="inline-flex items-center space-x-1 lg:space-x-1.5 px-2 lg:px-2.5 py-1 bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-900 dark:text-amber-300 text-xs font-semibold rounded-full ring-1 ring-amber-300 dark:ring-amber-700">
+                          <Crown className="w-3 h-3 lg:w-3.5 lg:h-3.5 flex-shrink-0" />
+                          <span className="hidden lg:inline">Admin Global</span>
+                          <span className="lg:hidden">Global</span>
+                        </span>
+                      ) : user.role === 'admin' ? (
                         <span className="inline-flex items-center space-x-1 lg:space-x-1.5 px-2 lg:px-2.5 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-medium rounded-full">
                           <ShieldCheck className="w-3 h-3 lg:w-3.5 lg:h-3.5 flex-shrink-0" />
                           <span className="hidden lg:inline">Administrador</span>
@@ -558,10 +565,10 @@ export const UsersManagement: React.FC = () => {
             {/* Mobile Cards - Hidden on desktop */}
             <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
               {filteredUsers.map((user) => (
-                <div key={user.id} className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <div key={user.id} className={`p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${user.isSuperAdmin ? 'bg-amber-50/60 dark:bg-amber-900/10' : ''}`}>
                   <div className="flex items-start justify-between mb-2 sm:mb-3">
                     <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 border-2 border-green-200 dark:border-green-700">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 border-2 ${user.isSuperAdmin ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-200 dark:ring-amber-800' : 'border-green-200 dark:border-green-700'}`}>
                         {user.photoUrl ? (
                           <img
                             src={user.photoUrl}
@@ -590,7 +597,13 @@ export const UsersManagement: React.FC = () => {
                   
                   <div className="flex items-center justify-between mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
                     <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                      {user.role === 'admin' ? (
+                      {user.isSuperAdmin ? (
+                        <span className="inline-flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-900 dark:text-amber-300 text-xs font-semibold rounded-full ring-1 ring-amber-300 dark:ring-amber-700">
+                          <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                          <span className="hidden xs:inline">Global</span>
+                          <span className="xs:hidden">G</span>
+                        </span>
+                      ) : user.role === 'admin' ? (
                         <span className="inline-flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-medium rounded-full">
                           <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
                           <span className="hidden xs:inline">Admin</span>

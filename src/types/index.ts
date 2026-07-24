@@ -4,6 +4,7 @@ export interface User {
   email: string;
   role: 'admin' | 'user';
   createdAt: string;
+  isSuperAdmin?: boolean;
   // Campos de colaborador (unificado)
   photoUrl?: string | null;
   phone?: string | null;
