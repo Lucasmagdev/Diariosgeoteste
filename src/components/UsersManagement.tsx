@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, User, Mail, Shield, ShieldCheck, Crown, Edit, Trash2, Phone, Camera, Loader2, X } from 'lucide-react';
+import { Search, Plus, User, Mail, Shield, ShieldCheck, Edit, Trash2, Phone, Camera, Loader2, X } from 'lucide-react';
 import { User as UserType } from '../types';
 import { supabase, isSupabaseConfigured, createIsolatedAuthClient } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
@@ -517,7 +517,6 @@ export const UsersManagement: React.FC = () => {
                     <td className="py-3 lg:py-4 px-4 lg:px-6">
                       {user.isSuperAdmin ? (
                         <span className="inline-flex items-center space-x-1 lg:space-x-1.5 px-2 lg:px-2.5 py-1 bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-900 dark:text-amber-300 text-xs font-semibold rounded-full ring-1 ring-amber-300 dark:ring-amber-700">
-                          <Crown className="w-3 h-3 lg:w-3.5 lg:h-3.5 flex-shrink-0" />
                           <span className="hidden lg:inline">Admin Global</span>
                           <span className="lg:hidden">Global</span>
                         </span>
@@ -599,7 +598,6 @@ export const UsersManagement: React.FC = () => {
                     <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                       {user.isSuperAdmin ? (
                         <span className="inline-flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-900 dark:text-amber-300 text-xs font-semibold rounded-full ring-1 ring-amber-300 dark:ring-amber-700">
-                          <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
                           <span className="hidden xs:inline">Global</span>
                           <span className="xs:hidden">G</span>
                         </span>
