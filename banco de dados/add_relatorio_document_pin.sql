@@ -73,6 +73,33 @@ begin
         ) order by d.created_at desc)
         from public.obra_documents d
         where d.obra_id = o.id
+      ), '[]'::jsonb),
+      'checklists', coalesce((
+        select jsonb_agg(jsonb_build_object(
+          'id', c.id,
+          'title', c.title,
+          'status', c.status,
+          'signature_url', c.signature_url,
+          'signed_at', c.signed_at,
+          'signed_by', c.signed_by,
+          'created_at', c.created_at,
+          'items', coalesce((
+            select jsonb_agg(jsonb_build_object(
+              'id', i.id,
+              'position', i.position,
+              'text', i.text,
+              'required', i.required,
+              'requires_photo', i.requires_photo,
+              'checked', i.checked,
+              'photo_data', i.photo_data,
+              'note', i.note
+            ) order by i.position)
+            from public.obra_checklist_items i
+            where i.checklist_id = c.id
+          ), '[]'::jsonb)
+        ) order by c.created_at desc)
+        from public.obra_checklists c
+        where c.obra_id = o.id
       ), '[]'::jsonb)
     ) as obra_json
     from public.obras o
