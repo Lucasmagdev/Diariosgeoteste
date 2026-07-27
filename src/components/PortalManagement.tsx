@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Plus, Building2, Edit, Trash2, Link as LinkIcon, KeyRound, Upload, FileText,
   CheckCircle2, XCircle, ChevronDown, ChevronRight, Paperclip, PenLine, Calendar, Image as ImageIcon, Lock,
-  ClipboardList, ListChecks, Camera, Eye, GripVertical,
+  ClipboardList, ListChecks, Camera, Eye, GripVertical, Download,
 } from 'lucide-react';
 import { Client, Obra, ObraDocument, ObraDocumentCategory, PortalCredential, ChecklistTemplate, ChecklistTemplateItem, ObraChecklist, ObraChecklistItem } from '../types';
 import { useToast } from '../contexts/ToastContext';
@@ -11,6 +11,7 @@ import ConfirmDialog from './ConfirmDialog';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { FilterBar, IconButton, Modal, PageHeader, StatusBadge, Surface } from './ui';
 import { uploadPortalDoc, deletePortalDoc } from '../utils/portalDocStorage';
+import { generateChecklistPdf } from '../utils/checklistPdf';
 
 const CATEGORIES: { value: ObraDocumentCategory; label: string }[] = [
   { value: 'contrato', label: 'Contrato' },
@@ -40,6 +41,18 @@ const buildPortalLink = (): string => {
     url = new URL(DEFAULT_PUBLIC_APP_URL);
   }
   url.searchParams.set('portal', '1');
+  return url.toString();
+};
+
+const buildChecklistPublicLink = (checklistToken: string): string => {
+  const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();
+  let url: URL;
+  try {
+    url = new URL(configured || DEFAULT_PUBLIC_APP_URL);
+  } catch {
+    url = new URL(DEFAULT_PUBLIC_APP_URL);
+  }
+  url.searchParams.set('checklist_pub', checklistToken);
   return url.toString();
 };
 
@@ -501,6 +514,42 @@ export const PortalManagement: React.FC = () => {
     }
   };
 
+  const copyChecklistLink = async (checklistId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('create_checklist_signature_link', { p_checklist_id: checklistId });
+      if (error) throw error;
+      const link = buildChecklistPublicLink(data.token);
+      await navigator.clipboard.writeText(link);
+      toast.success('Link copiado. O cliente preenche e assina direto, sem precisar logar.');
+    } catch (err) {
+      console.error('create_checklist_signature_link', err);
+      toast.error('Falha ao gerar link do checklist.');
+    }
+  };
+
+  const downloadChecklistPdf = async (c: ObraChecklist) => {
+    const o = obras.find(x => x.id === c.obraId);
+    try {
+      await generateChecklistPdf({
+        obraName: o?.name || '-',
+        clientName: o ? clientName(o.clientId) : '-',
+        title: c.title,
+        status: c.status,
+        createdAt: c.createdAt,
+        signedBy: c.signedBy,
+        signedAt: c.signedAt,
+        signatureUrl: c.signatureUrl,
+        items: c.items.map(it => ({
+          text: it.text, required: it.required, requiresPhoto: it.requiresPhoto,
+          checked: it.checked, photoData: it.photoData, note: it.note,
+        })),
+      }, `checklist-${c.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`);
+    } catch (err) {
+      console.error('checklist pdf', err);
+      toast.error('Falha ao gerar PDF.');
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -667,6 +716,7 @@ export const PortalManagement: React.FC = () => {
                                   <p className="text-[11px] text-gray-500">{done}/{c.items.length} item(ns) marcado(s)</p>
                                 </div>
                                 <StatusBadge variant={c.status === 'completed' ? 'success' : 'warning'}>{c.status === 'completed' ? 'concluído' : 'pendente'}</StatusBadge>
+                                <IconButton icon={LinkIcon} label="Copiar link para o cliente preencher" tone="primary" onClick={() => copyChecklistLink(c.id)} />
                                 <IconButton icon={Eye} label="Ver detalhes" tone="primary" onClick={() => setViewChecklist(c)} />
                                 <IconButton icon={Trash2} label="Remover" tone="danger" onClick={() => setConfirmChecklist({ open: true, checklist: c })} />
                               </div>
@@ -887,9 +937,14 @@ export const PortalManagement: React.FC = () => {
       <Modal open={!!viewChecklist} onClose={() => setViewChecklist(null)} title={viewChecklist?.title || 'Checklist'} size="lg">
         {viewChecklist && (
           <div className="space-y-3">
-            <StatusBadge variant={viewChecklist.status === 'completed' ? 'success' : 'warning'}>
-              {viewChecklist.status === 'completed' ? 'concluído' : 'pendente'}
-            </StatusBadge>
+            <div className="flex items-center justify-between">
+              <StatusBadge variant={viewChecklist.status === 'completed' ? 'success' : 'warning'}>
+                {viewChecklist.status === 'completed' ? 'concluído' : 'pendente'}
+              </StatusBadge>
+              <button onClick={() => downloadChecklistPdf(viewChecklist)} className="btn-secondary flex items-center gap-2 text-sm">
+                <Download className="h-4 w-4" /> Gerar PDF
+              </button>
+            </div>
             {viewChecklist.status === 'completed' && (
               <p className="text-xs text-gray-500">Assinado por {viewChecklist.signedBy || '—'} em {viewChecklist.signedAt ? new Date(viewChecklist.signedAt).toLocaleString('pt-BR') : '—'}</p>
             )}

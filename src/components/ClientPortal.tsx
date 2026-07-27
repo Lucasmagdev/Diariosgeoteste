@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2, FileText, LogOut, ShieldCheck, ChevronLeft, ChevronRight, PenLine, CheckCircle2,
   Calendar, Download, FolderOpen, ListChecks, Camera, X, AlertTriangle, Lock,
@@ -255,6 +255,22 @@ export const ClientPortal: React.FC = () => {
       photo: items.filter((it: any) => it.requires_photo && !it.photo_data).length,
     };
   }, [checklistFill]);
+
+  // autosave: cada marcação/foto/nota salva sozinha, sem esperar a assinatura final
+  const checklistAutosaveSkip = useRef(true);
+  useEffect(() => {
+    checklistAutosaveSkip.current = true;
+  }, [checklistFill?.checklist?.id]);
+  useEffect(() => {
+    if (!checklistFill) return;
+    if (checklistAutosaveSkip.current) { checklistAutosaveSkip.current = false; return; }
+    const handle = setTimeout(() => {
+      const payload = checklistFill.items.map((it: any) => ({ id: it.id, checked: !!it.checked, photo_data: it.photo_data || '', note: it.note || '' }));
+      supabase.rpc('portal_save_checklist_progress', { p_token: token, p_checklist_id: checklistFill.checklist.id, p_items: payload })
+        .then(({ error }) => { if (error) console.error('checklist autosave', error); });
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [checklistFill, token]);
 
   const canSubmitChecklist = checklistFill && checklistMissing.required === 0 && checklistMissing.photo === 0;
 

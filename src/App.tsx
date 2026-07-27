@@ -16,6 +16,7 @@ import { InstallPWA } from './components/InstallPWA';
 import { useIsPWA } from './hooks/useIsPWA';
 import { EquipmentMap } from './components/EquipmentMap';
 import { PublicDiarySignature } from './components/PublicDiarySignature';
+import { PublicChecklistFill } from './components/PublicChecklistFill';
 import { PortalManagement } from './components/PortalManagement';
 import { ClientPortal } from './components/ClientPortal';
 import { IntroScreen } from './components/IntroScreen';
@@ -32,6 +33,11 @@ const AppContent: React.FC = () => {
     []
   );
   const isPublicSignaturePage = Boolean(signatureToken);
+  const checklistPublicToken = useMemo(
+    () => new URLSearchParams(window.location.search).get('checklist_pub')?.trim() || '',
+    []
+  );
+  const isPublicChecklistPage = Boolean(checklistPublicToken);
   const isClientPortalPage = useMemo(
     () => new URLSearchParams(window.location.search).get('portal') != null,
     []
@@ -39,7 +45,7 @@ const AppContent: React.FC = () => {
 
   // Intro cinematográfica: apenas na área admin (interna), uma vez por sessão.
   // ?introPreview=1 força replay.
-  const isAdminArea = !isClientPortalPage && !isPublicSignaturePage;
+  const isAdminArea = !isClientPortalPage && !isPublicSignaturePage && !isPublicChecklistPage;
   const [showIntro, setShowIntro] = useState(() => {
     if (!isAdminArea) return false;
     const forceIntro = new URLSearchParams(window.location.search).get('introPreview') === '1';
@@ -54,7 +60,7 @@ const AppContent: React.FC = () => {
 
   // Mostrar splash screen apenas na primeira vez e se for PWA ou mobile
   useEffect(() => {
-    if (isPublicSignaturePage || isClientPortalPage) {
+    if (isPublicSignaturePage || isClientPortalPage || isPublicChecklistPage) {
       setShowSplash(false);
       return;
     }
@@ -79,6 +85,10 @@ const AppContent: React.FC = () => {
 
   if (isPublicSignaturePage) {
     return <PublicDiarySignature token={signatureToken} />;
+  }
+
+  if (isPublicChecklistPage) {
+    return <PublicChecklistFill token={checklistPublicToken} />;
   }
 
   if (showIntro) {
