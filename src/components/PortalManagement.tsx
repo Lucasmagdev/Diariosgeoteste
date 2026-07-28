@@ -30,7 +30,7 @@ const categoryLabel = (c: ObraDocumentCategory, custom?: string | null) =>
 
 const isImage = (t?: string | null) => !!t && t.startsWith('image');
 
-const DEFAULT_PUBLIC_APP_URL = 'https://geotestegf.netlify.app';
+const DEFAULT_PUBLIC_APP_URL = 'https://geotesteapp.netlify.app';
 
 const buildPortalLink = (): string => {
   const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();

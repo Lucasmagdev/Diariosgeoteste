@@ -22,7 +22,7 @@ interface DiariesListProps {
   onNewDiary: () => void;
 }
 
-const DEFAULT_PUBLIC_APP_URL = 'https://geotestegf.netlify.app';
+const DEFAULT_PUBLIC_APP_URL = 'https://geotesteapp.netlify.app';
 
 // Função para formatar endereço: usar "S/R" se rua vazia, "S/N" se número vazio
 const formatAddress = (address: string | null | undefined, enderecoDetalhado: any): string => {

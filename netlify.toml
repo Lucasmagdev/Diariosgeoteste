@@ -17,5 +17,6 @@
 # Adicione estas variáveis:
 # - VITE_SUPABASE_URL
 # - VITE_SUPABASE_ANON_KEY
+# - VITE_PUBLIC_APP_URL (https://geotesteapp.netlify.app - usada para gerar links publicos de portal/checklist/assinatura)
 # - GROQ_API_KEY (opcional, para o assistente AI; usada apenas pela Netlify Function)
 
