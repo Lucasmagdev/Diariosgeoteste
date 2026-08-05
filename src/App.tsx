@@ -17,6 +17,7 @@ import { useIsPWA } from './hooks/useIsPWA';
 import { EquipmentMap } from './components/EquipmentMap';
 import { PublicDiarySignature } from './components/PublicDiarySignature';
 import { PublicChecklistFill } from './components/PublicChecklistFill';
+import { PublicSurveyFill } from './components/PublicSurveyFill';
 import { PortalManagement } from './components/PortalManagement';
 import { ClientPortal } from './components/ClientPortal';
 import { IntroScreen } from './components/IntroScreen';
@@ -38,6 +39,11 @@ const AppContent: React.FC = () => {
     []
   );
   const isPublicChecklistPage = Boolean(checklistPublicToken);
+  const surveyPublicToken = useMemo(
+    () => new URLSearchParams(window.location.search).get('pesquisa_pub')?.trim() || '',
+    []
+  );
+  const isPublicSurveyPage = Boolean(surveyPublicToken);
   const isClientPortalPage = useMemo(
     () => new URLSearchParams(window.location.search).get('portal') != null,
     []
@@ -45,7 +51,7 @@ const AppContent: React.FC = () => {
 
   // Intro cinematográfica: apenas na área admin (interna), uma vez por sessão.
   // ?introPreview=1 força replay.
-  const isAdminArea = !isClientPortalPage && !isPublicSignaturePage && !isPublicChecklistPage;
+  const isAdminArea = !isClientPortalPage && !isPublicSignaturePage && !isPublicChecklistPage && !isPublicSurveyPage;
   const [showIntro, setShowIntro] = useState(() => {
     if (!isAdminArea) return false;
     const forceIntro = new URLSearchParams(window.location.search).get('introPreview') === '1';
@@ -60,7 +66,7 @@ const AppContent: React.FC = () => {
 
   // Mostrar splash screen apenas na primeira vez e se for PWA ou mobile
   useEffect(() => {
-    if (isPublicSignaturePage || isClientPortalPage || isPublicChecklistPage) {
+    if (isPublicSignaturePage || isClientPortalPage || isPublicChecklistPage || isPublicSurveyPage) {
       setShowSplash(false);
       return;
     }
@@ -89,6 +95,10 @@ const AppContent: React.FC = () => {
 
   if (isPublicChecklistPage) {
     return <PublicChecklistFill token={checklistPublicToken} />;
+  }
+
+  if (isPublicSurveyPage) {
+    return <PublicSurveyFill token={surveyPublicToken} />;
   }
 
   if (showIntro) {
@@ -125,7 +135,7 @@ const AppContent: React.FC = () => {
       case 'clients':
         return user.role === 'admin' ? <ClientsManagement /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'users':
-        return user.role === 'admin' ? <UsersManagement /> : <Dashboard onPageChange={setCurrentPage} />;
+        return <UsersManagement />;
       case 'equipment':
         return user.role === 'admin' ? <EquipmentMap /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'portal':

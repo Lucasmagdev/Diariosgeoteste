@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Plus, Building2, Edit, Trash2, Link as LinkIcon, KeyRound, Upload, FileText,
   CheckCircle2, XCircle, ChevronDown, ChevronRight, Paperclip, PenLine, Calendar, Image as ImageIcon, Lock,
-  ClipboardList, ListChecks, Camera, Eye, GripVertical, Download,
+  ClipboardList, ListChecks, Camera, Eye, GripVertical, Download, Star,
 } from 'lucide-react';
-import { Client, Obra, ObraDocument, ObraDocumentCategory, PortalCredential, ChecklistTemplate, ChecklistTemplateItem, ObraChecklist, ObraChecklistItem } from '../types';
+import { Client, Obra, ObraDocument, ObraDocumentCategory, PortalCredential, ChecklistTemplate, ChecklistTemplateItem, ObraChecklist, ObraChecklistItem, SatisfactionSurveyResponse } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmDialog from './ConfirmDialog';
@@ -12,6 +12,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { FilterBar, IconButton, Modal, PageHeader, StatusBadge, Surface } from './ui';
 import { uploadPortalDoc, deletePortalDoc } from '../utils/portalDocStorage';
 import { generateChecklistPdf } from '../utils/checklistPdf';
+import { generateSurveyPdf } from '../utils/surveyPdf';
 
 const CATEGORIES: { value: ObraDocumentCategory; label: string }[] = [
   { value: 'contrato', label: 'Contrato' },
@@ -54,6 +55,39 @@ const buildChecklistPublicLink = (checklistToken: string): string => {
   }
   url.searchParams.set('checklist_pub', checklistToken);
   return url.toString();
+};
+
+const buildSurveyPublicLink = (surveyToken: string): string => {
+  const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();
+  let url: URL;
+  try {
+    url = new URL(configured || DEFAULT_PUBLIC_APP_URL);
+  } catch {
+    url = new URL(DEFAULT_PUBLIC_APP_URL);
+  }
+  url.searchParams.set('pesquisa_pub', surveyToken);
+  return url.toString();
+};
+
+const mapSurveyResponse = (r: any): SatisfactionSurveyResponse => ({
+  id: r.id, obraId: r.obra_id, linkId: r.link_id,
+  empresa: r.empresa, obraNome: r.obra_nome, dataReferencia: r.data_referencia,
+  ratings: r.ratings || {}, avaliacaoGeral: r.avaliacao_geral, nps: r.nps,
+  comentarioAgradou: r.comentario_agradou, comentarioMelhorar: r.comentario_melhorar, comentarioObservacao: r.comentario_observacao,
+  createdAt: r.created_at,
+});
+
+const SURVEY_RATING_LABELS: Record<string, string> = {
+  comercial_atendimento: 'Atendimento da equipe comercial',
+  comercial_agilidade: 'Agilidade no envio da proposta e retorno',
+  comercial_clareza: 'Clareza das informações técnicas e comerciais',
+  operacional_prazos: 'Cumprimento dos prazos acordados',
+  operacional_organizacao_campo: 'Organização e profissionalismo em campo',
+  operacional_qualidade_execucao: 'Qualidade na execução dos ensaios',
+  operacional_organizacao_operacao: 'Organização e profissionalismo da operação',
+  documentacao_prazo_entrega: 'Prazo de entrega dos relatórios',
+  documentacao_clareza_relatorios: 'Clareza e qualidade técnica dos relatórios',
+  documentacao_atendimento: 'Atendimento da equipe de documentação',
 };
 
 const mapObra = (r: any): Obra => ({
@@ -99,6 +133,7 @@ export const PortalManagement: React.FC = () => {
   const [docsByObra, setDocsByObra] = useState<Record<string, ObraDocument[]>>({});
   const [diariesByObra, setDiariesByObra] = useState<Record<string, DiaryLite[]>>({});
   const [checklistsByObra, setChecklistsByObra] = useState<Record<string, ObraChecklist[]>>({});
+  const [surveyResponsesByObra, setSurveyResponsesByObra] = useState<Record<string, SatisfactionSurveyResponse[]>>({});
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -210,6 +245,18 @@ export const PortalManagement: React.FC = () => {
     }
   };
 
+  const fetchSurveyResponses = async (obraId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('satisfaction_survey_responses').select('*').eq('obra_id', obraId).order('created_at', { ascending: false });
+      if (error) throw error;
+      setSurveyResponsesByObra(prev => ({ ...prev, [obraId]: (data || []).map(mapSurveyResponse) }));
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao carregar respostas da pesquisa.');
+    }
+  };
+
   const toggleExpand = (obra: Obra) => {
     const next = expanded === obra.id ? null : obra.id;
     setExpanded(next);
@@ -217,6 +264,7 @@ export const PortalManagement: React.FC = () => {
       if (!docsByObra[next]) fetchDocs(next);
       if (!diariesByObra[next]) fetchDiaries(obra);
       if (!checklistsByObra[next]) fetchChecklists(next);
+      if (!surveyResponsesByObra[next]) fetchSurveyResponses(next);
     }
   };
 
@@ -550,6 +598,52 @@ export const PortalManagement: React.FC = () => {
     }
   };
 
+  const copySurveyLink = async (obraId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('create_satisfaction_survey_link', { p_obra_id: obraId });
+      if (error) throw error;
+      const link = buildSurveyPublicLink(data.token);
+      await navigator.clipboard.writeText(link);
+      toast.success('Link copiado. O cliente responde direto, sem precisar logar.');
+    } catch (err) {
+      console.error('create_satisfaction_survey_link', err);
+      toast.error('Falha ao gerar link da pesquisa.');
+    }
+  };
+
+  const [viewSurvey, setViewSurvey] = useState<SatisfactionSurveyResponse | null>(null);
+  const [confirmSurvey, setConfirmSurvey] = useState<{ open: boolean; response?: SatisfactionSurveyResponse }>({ open: false });
+
+  const downloadSurveyPdf = async (r: SatisfactionSurveyResponse) => {
+    try {
+      await generateSurveyPdf({
+        obraName: r.obraNome, empresa: r.empresa, dataReferencia: r.dataReferencia, createdAt: r.createdAt,
+        ratings: Object.entries(r.ratings || {}).map(([key, value]) => ({ label: SURVEY_RATING_LABELS[key] || key, value: value as number })),
+        avaliacaoGeral: r.avaliacaoGeral, nps: r.nps,
+        comentarioAgradou: r.comentarioAgradou, comentarioMelhorar: r.comentarioMelhorar, comentarioObservacao: r.comentarioObservacao,
+      }, `pesquisa-satisfacao-${(r.empresa || 'resposta').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`);
+    } catch (err) {
+      console.error('survey pdf', err);
+      toast.error('Falha ao gerar PDF.');
+    }
+  };
+
+  const deleteSurveyResponse = async () => {
+    const r = confirmSurvey.response;
+    if (!r) return;
+    try {
+      const { error } = await supabase.from('satisfaction_survey_responses').delete().eq('id', r.id);
+      if (error) throw error;
+      setSurveyResponsesByObra(prev => ({ ...prev, [r.obraId]: (prev[r.obraId] || []).filter(x => x.id !== r.id) }));
+      toast.success('Resposta removida.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao remover resposta.');
+    } finally {
+      setConfirmSurvey({ open: false });
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -722,6 +816,32 @@ export const PortalManagement: React.FC = () => {
                               </div>
                             );
                           })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Pesquisa de Satisfação */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Pesquisa de satisfação ({(surveyResponsesByObra[o.id] || []).length})</h4>
+                        <button onClick={() => copySurveyLink(o.id)} className="btn-secondary flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4" /> Copiar link da pesquisa</button>
+                      </div>
+                      {(surveyResponsesByObra[o.id] || []).length === 0 ? (
+                        <p className="text-sm text-gray-400">Nenhuma resposta recebida ainda.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {(surveyResponsesByObra[o.id] || []).map(r => (
+                            <div key={r.id} className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2">
+                              <Star className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{r.empresa || 'Empresa não informada'}</p>
+                                <p className="text-[11px] text-gray-500">{new Date(r.createdAt).toLocaleString('pt-BR')} • Nota geral {r.avaliacaoGeral}/5 • NPS {r.nps}/10</p>
+                              </div>
+                              <IconButton icon={Eye} label="Ver detalhes" tone="primary" onClick={() => setViewSurvey(r)} />
+                              <IconButton icon={Download} label="Gerar PDF" tone="primary" onClick={() => downloadSurveyPdf(r)} />
+                              <IconButton icon={Trash2} label="Remover" tone="danger" onClick={() => setConfirmSurvey({ open: true, response: r })} />
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -976,6 +1096,57 @@ export const PortalManagement: React.FC = () => {
         )}
       </Modal>
 
+      {/* View survey response modal */}
+      <Modal open={!!viewSurvey} onClose={() => setViewSurvey(null)} title="Resposta da pesquisa de satisfação" size="lg">
+        {viewSurvey && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{viewSurvey.empresa || 'Empresa não informada'}</p>
+                <p className="text-xs text-gray-500">{viewSurvey.obraNome} • {new Date(viewSurvey.createdAt).toLocaleString('pt-BR')}</p>
+              </div>
+              <button onClick={() => downloadSurveyPdf(viewSurvey)} className="btn-secondary flex items-center gap-2 text-sm">
+                <Download className="h-4 w-4" /> Gerar PDF
+              </button>
+            </div>
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+              {Object.entries(viewSurvey.ratings || {}).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2">
+                  <p className="text-sm text-gray-900 dark:text-white">{SURVEY_RATING_LABELS[key] || key}</p>
+                  <StatusBadge variant={(value as number) >= 4 ? 'success' : (value as number) === 3 ? 'warning' : 'danger'}>{String(value)}/5</StatusBadge>
+                </div>
+              ))}
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2 bg-emerald-50/50 dark:bg-emerald-900/10">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Avaliação geral</p>
+                <StatusBadge variant={viewSurvey.avaliacaoGeral >= 4 ? 'success' : viewSurvey.avaliacaoGeral === 3 ? 'warning' : 'danger'}>{viewSurvey.avaliacaoGeral}/5</StatusBadge>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2 bg-emerald-50/50 dark:bg-emerald-900/10">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">NPS (recomendação)</p>
+                <StatusBadge variant={viewSurvey.nps >= 9 ? 'success' : viewSurvey.nps >= 7 ? 'warning' : 'danger'}>{viewSurvey.nps}/10</StatusBadge>
+              </div>
+              {viewSurvey.comentarioAgradou && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">O que mais agradou</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">{viewSurvey.comentarioAgradou}</p>
+                </div>
+              )}
+              {viewSurvey.comentarioMelhorar && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Pontos de melhoria</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">{viewSurvey.comentarioMelhorar}</p>
+                </div>
+              )}
+              {viewSurvey.comentarioObservacao && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Elogios, sugestões ou observações</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">{viewSurvey.comentarioObservacao}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <ConfirmDialog
         isOpen={confirmObra.open}
         onClose={() => setConfirmObra({ open: false })}
@@ -1006,6 +1177,14 @@ export const PortalManagement: React.FC = () => {
         onConfirm={deleteChecklist}
         title="Remover checklist"
         message={`Remover o checklist "${confirmChecklist.checklist?.title}" desta obra?`}
+        confirmText="Remover" cancelText="Cancelar" type="danger"
+      />
+      <ConfirmDialog
+        isOpen={confirmSurvey.open}
+        onClose={() => setConfirmSurvey({ open: false })}
+        onConfirm={deleteSurveyResponse}
+        title="Remover resposta"
+        message={`Remover a resposta de "${confirmSurvey.response?.empresa || 'empresa não informada'}"?`}
         confirmText="Remover" cancelText="Cancelar" type="danger"
       />
     </div>

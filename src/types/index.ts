@@ -203,6 +203,35 @@ export interface ObraChecklist {
   items: ObraChecklistItem[];
 }
 
+export interface SatisfactionSurveyRatings {
+  comercial_atendimento: number;
+  comercial_agilidade: number;
+  comercial_clareza: number;
+  operacional_prazos: number;
+  operacional_organizacao_campo: number;
+  operacional_qualidade_execucao: number;
+  operacional_organizacao_operacao: number;
+  documentacao_prazo_entrega: number;
+  documentacao_clareza_relatorios: number;
+  documentacao_atendimento: number;
+}
+
+export interface SatisfactionSurveyResponse {
+  id: string;
+  obraId: string;
+  linkId?: string | null;
+  empresa?: string | null;
+  obraNome?: string | null;
+  dataReferencia?: string | null;
+  ratings: SatisfactionSurveyRatings;
+  avaliacaoGeral: number;
+  nps: number;
+  comentarioAgradou?: string | null;
+  comentarioMelhorar?: string | null;
+  comentarioObservacao?: string | null;
+  createdAt: string;
+}
+
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; code?: string; message?: string }>;
