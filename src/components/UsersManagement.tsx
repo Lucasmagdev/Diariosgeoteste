@@ -38,6 +38,7 @@ const mockUsers: UserType[] = [
 
 export const UsersManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
   const toast = useToast();
   const [users, setUsers] = useState<UserType[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -305,24 +306,31 @@ export const UsersManagement: React.FC = () => {
           // O perfil será criado automaticamente pelo trigger
           // Aguardar um pouco para o trigger processar
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Buscar o perfil criado
-          const { data: profileData, error: profileError } = await supabase
+
+          // Usa a propria sessao (temporaria) do usuario recem-criado para gravar
+          // os campos extras: assim funciona tanto para admin quanto para usuario
+          // comum criando colega (RLS so libera update/insert da propria linha).
+          // O role final e sempre travado no banco pelo trigger enforce_profile_role_guard.
+          const writerClient = isAdmin ? supabase : authClient;
+
+          const { data: profileData, error: profileError } = await writerClient
             .from('profiles')
             .select('*')
             .eq('id', authData.user.id)
             .single();
 
+          const effectiveRole = isAdmin ? formData.role : 'user';
+
           // Atualizar perfil com campos de colaborador (garante o cargo escolhido)
           const updateData: any = {
-            role: formData.role,
+            role: effectiveRole,
             phone: formData.phone.trim() || null,
             collaborator_role: formData.collaboratorRole.trim() || null,
             collaborator_status: formData.collaboratorStatus,
             photo_url: photoUrl
           };
 
-          if (photoFile && authData.user.id) {
+          if (photoFile && authData.user.id && isAdmin) {
             setUploadingPhoto(true);
             try {
               const newPhotoUrl = await uploadCollaboratorPhoto(photoFile, authData.user.id);
@@ -340,19 +348,19 @@ export const UsersManagement: React.FC = () => {
           if (profileError) {
             console.warn('Perfil não encontrado, criando manualmente:', profileError);
             // Criar perfil manualmente se o trigger falhou
-            const { error: insertError } = await supabase
+            const { error: insertError } = await writerClient
               .from('profiles')
               .insert({
                 id: authData.user.id,
                 name: formData.name,
                 email: formData.email,
-                role: formData.role,
+                role: effectiveRole,
                 ...updateData
               });
             if (insertError) throw insertError;
           } else {
             // Atualizar perfil existente com campos de colaborador
-            const { error: updateError } = await supabase
+            const { error: updateError } = await writerClient
               .from('profiles')
               .update(updateData)
               .eq('id', authData.user.id);
@@ -363,7 +371,7 @@ export const UsersManagement: React.FC = () => {
             id: authData.user.id,
             name: formData.name,
             email: formData.email,
-            role: formData.role,
+            role: effectiveRole,
             createdAt: new Date().toISOString(),
             phone: formData.phone || null,
             collaboratorRole: formData.collaboratorRole || null,
@@ -537,23 +545,25 @@ export const UsersManagement: React.FC = () => {
                       {new Date(user.createdAt).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-3 lg:py-4 px-4 lg:px-6">
-                      <div className="flex items-center justify-center space-x-1 lg:space-x-2">
-                        <button
-                          onClick={() => handleOpenModal(user)}
-                          className="p-1.5 lg:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title="Editar"
-                        >
-                          <Edit className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(user.id, user.name)}
-                          className="p-1.5 lg:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Excluir"
-                          disabled={user.id === currentUser?.id}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                        </button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex items-center justify-center space-x-1 lg:space-x-2">
+                          <button
+                            onClick={() => handleOpenModal(user)}
+                            className="p-1.5 lg:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                            title="Editar"
+                          >
+                            <Edit className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(user.id, user.name)}
+                            className="p-1.5 lg:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Excluir"
+                            disabled={user.id === currentUser?.id}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                          </button>
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                   ))}
@@ -619,23 +629,25 @@ export const UsersManagement: React.FC = () => {
                       </span>
                     </div>
                     
-                    <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
-                      <button
-                        onClick={() => handleOpenModal(user)}
-                        className="p-2 sm:p-2.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
-                        title="Editar"
-                      >
-                        <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(user.id, user.name)}
-                        className="p-2 sm:p-2.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
-                        title="Excluir"
-                        disabled={user.id === currentUser?.id}
-                      >
-                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                    </div>
+                    {isAdmin ? (
+                      <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleOpenModal(user)}
+                          className="p-2 sm:p-2.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(user.id, user.name)}
+                          className="p-2 sm:p-2.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+                          title="Excluir"
+                          disabled={user.id === currentUser?.id}
+                        >
+                          <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -663,57 +675,59 @@ export const UsersManagement: React.FC = () => {
       {/* Modal */}
       <Modal open={showModal} onClose={handleCloseModal} title={editingUser ? 'Editar usuário' : 'Novo usuário'} size="lg">
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Photo Upload */}
-              <div className="flex flex-col items-center space-y-3">
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-full overflow-hidden bg-green-100 dark:bg-green-900/30 border-2 border-green-200 dark:border-green-700">
-                    {photoPreview ? (
-                      <img
-                        src={photoPreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <User className="w-12 h-12 text-green-600 dark:text-green-400" />
-                      </div>
+              {/* Photo Upload - upload de foto de terceiros exige admin (politica de storage) */}
+              {(isAdmin || editingUser) && (
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-green-100 dark:bg-green-900/30 border-2 border-green-200 dark:border-green-700">
+                      {photoPreview ? (
+                        <img
+                          src={photoPreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <User className="w-12 h-12 text-green-600 dark:text-green-400" />
+                        </div>
+                      )}
+                    </div>
+                    {photoPreview && (
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
-                  {photoPreview && (
-                    <button
-                      type="button"
-                      onClick={handleRemovePhoto}
-                      className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                      disabled={uploadingPhoto}
+                    />
+                    <div className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                      {uploadingPhoto ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-4 h-4" />
+                          <span>{photoPreview ? 'Alterar Foto' : 'Adicionar Foto'}</span>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                  <p className="text-xs text-gray-500">JPG, PNG ou WEBP (máx. 5MB)</p>
                 </div>
-                
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    onChange={handlePhotoChange}
-                    className="hidden"
-                    disabled={uploadingPhoto}
-                  />
-                  <div className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                    {uploadingPhoto ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Enviando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="w-4 h-4" />
-                        <span>{photoPreview ? 'Alterar Foto' : 'Adicionar Foto'}</span>
-                      </>
-                    )}
-                  </div>
-                </label>
-                <p className="text-xs text-gray-500">JPG, PNG ou WEBP (máx. 5MB)</p>
-              </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
@@ -742,21 +756,27 @@ export const UsersManagement: React.FC = () => {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                  Função *
-                </label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'admin' | 'user' }))}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  required
-                >
-                  <option value="user">Usuário</option>
-                  <option value="admin">Administrador</option>
-                </select>
-              </div>
-              
+              {isAdmin ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                    Função *
+                  </label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'admin' | 'user' }))}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="user">Usuário</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+              ) : !editingUser ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+                  Novo colaborador entra como Usuário. Só um administrador pode conceder acesso de Administrador.
+                </p>
+              ) : null}
+
               <FormInput
                 label="Telefone (opcional)"
                 type="tel"

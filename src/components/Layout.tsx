@@ -32,13 +32,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
   const baseMenuItems = [
     { key: 'dashboard', label: 'Dashboard', icon: Home },
     { key: 'diaries', label: 'Diários', icon: FileText },
+    { key: 'users', label: 'Equipe', icon: Users },
     { key: 'profile', label: 'Meu Perfil', icon: User },
   ];
 
   const adminMenuItems = [
     ...baseMenuItems,
     { key: 'equipment', label: 'Equipamentos', icon: Map },
-    { key: 'users', label: 'Equipe', icon: Users },
     { key: 'clients', label: 'Clientes', icon: Building2 },
     { key: 'portal', label: 'Portal do Cliente', icon: Globe },
   ];
