@@ -26,6 +26,21 @@ export interface SurveyPdfData {
 const txt = (v: any): string => (v === null || v === undefined ? '' : String(v).trim());
 const orNI = (v: any): string => txt(v) || 'Não informado';
 
+/**
+ * Datas puras (YYYY-MM-DD, vindas do input date) precisam ser formatadas sem
+ * passar por new Date(): o parse trataria como UTC e, em fuso negativo, o PDF
+ * sairia com o dia anterior ao que o cliente respondeu.
+ */
+const formatDateOnlyBR = (value: string): string => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  try {
+    return new Date(value).toLocaleDateString('pt-BR');
+  } catch {
+    return value;
+  }
+};
+
 async function loadImage(url?: string | null) {
   if (!url) return null;
   try {
@@ -161,7 +176,7 @@ async function buildSurveyDoc(data: SurveyPdfData): Promise<jsPDF> {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     setText(MUTE);
-    doc.text(`Data informada na pesquisa: ${new Date(dataReferencia).toLocaleDateString('pt-BR')}`, MX, y);
+    doc.text(`Data informada na pesquisa: ${formatDateOnlyBR(dataReferencia)}`, MX, y);
     y += 6;
   }
 
