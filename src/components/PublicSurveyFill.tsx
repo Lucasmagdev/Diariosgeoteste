@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Star, MessageSquare, ShieldCheck, CheckCircle2, Send, ThumbsUp } from 'lucide-react';
+import { Star, MessageSquare, ShieldCheck, CheckCircle2, Send, ThumbsUp, Building2, MapPin, CalendarDays, LucideIcon } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 interface PublicSurveyFillProps {
@@ -73,6 +73,24 @@ const SCORE_TEXT_5: Record<number, string> = {
   4: 'text-lime-700 dark:text-lime-400',
   5: 'text-emerald-700 dark:text-emerald-400',
 };
+
+const SCALE_LEGEND_BAR: Record<number, string> = {
+  1: 'bg-red-500',
+  2: 'bg-orange-500',
+  3: 'bg-amber-500',
+  4: 'bg-lime-600',
+  5: 'bg-emerald-600',
+};
+
+const Field: React.FC<{ icon: LucideIcon; label: string; children: React.ReactNode }> = ({ icon: Icon, label, children }) => (
+  <div>
+    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">{label}</label>
+    <div className="relative">
+      <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-600/70" />
+      {children}
+    </div>
+  </div>
+);
 
 const npsTone = (n: number) => {
   if (n <= 6) return 'border-red-500 bg-red-500 text-white shadow-red-500/30';
@@ -168,6 +186,33 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
 
   useEffect(() => { fetchSurvey(); }, [fetchSurvey]);
 
+  // O CSS global prende o body (position: fixed) abaixo de 768px e joga a rolagem
+  // para o #root. Nesta pagina publica isso trava o scroll no meio do formulario,
+  // entao devolvemos a rolagem nativa do documento enquanto ela estiver montada.
+  useEffect(() => {
+    const root = document.getElementById('root');
+    const prev = {
+      position: document.body.style.position,
+      overflow: document.body.style.overflow,
+      height: document.body.style.height,
+      width: document.body.style.width,
+      rootOverflow: root?.style.overflow ?? '',
+      rootHeight: root?.style.height ?? '',
+    };
+    document.body.style.position = 'static';
+    document.body.style.overflow = 'visible';
+    document.body.style.height = 'auto';
+    document.body.style.width = 'auto';
+    if (root) { root.style.overflow = 'visible'; root.style.height = 'auto'; }
+    return () => {
+      document.body.style.position = prev.position;
+      document.body.style.overflow = prev.overflow;
+      document.body.style.height = prev.height;
+      document.body.style.width = prev.width;
+      if (root) { root.style.overflow = prev.rootOverflow; root.style.height = prev.rootHeight; }
+    };
+  }, []);
+
   const answeredMap: Record<string, boolean> = useMemo(() => {
     const m: Record<string, boolean> = {};
     RATING_QUESTIONS.forEach(q => { m[q.key] = !!ratings[q.key]; });
@@ -186,23 +231,9 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  // ao responder, avanca gentilmente para a proxima pendente se ela estiver fora da tela
-  const advanceFrom = (key: string) => {
-    const idx = ALL_KEYS.indexOf(key);
-    const next = ALL_KEYS.slice(idx + 1).find(k => !answeredMap[k]);
-    if (!next) return;
-    const el = questionRefs.current[next];
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.bottom > window.innerHeight - 24) {
-      window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 220);
-    }
-  };
-
   const answerRating = (key: string, value: number) => {
     setRatings(prev => ({ ...prev, [key]: value }));
     setHighlightKey(null);
-    advanceFrom(key);
   };
 
   const handleSubmit = async () => {
@@ -364,24 +395,53 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
           </header>
 
           {/* identificacao */}
-          <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 sm:p-6 scroll-animate-up">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Empresa</label>
-                <input value={empresa} onChange={e => setEmpresa(e.target.value)} className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3.5 py-2.5 text-gray-900 dark:text-gray-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Obra</label>
-                <input value={obraNome} onChange={e => setObraNome(e.target.value)} className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3.5 py-2.5 text-gray-900 dark:text-gray-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Data</label>
-                <input type="date" value={dataReferencia} onChange={e => setDataReferencia(e.target.value)} className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3.5 py-2.5 text-gray-900 dark:text-gray-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition" />
+          <section className="overflow-hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 scroll-animate-up">
+            <div className="p-5 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 sm:gap-4">
+                <Field icon={Building2} label="Empresa">
+                  <input
+                    value={empresa}
+                    onChange={e => setEmpresa(e.target.value)}
+                    placeholder="Nome da empresa"
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-2.5 pl-10 pr-3.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </Field>
+                <Field icon={MapPin} label="Obra">
+                  <input
+                    value={obraNome}
+                    onChange={e => setObraNome(e.target.value)}
+                    placeholder="Nome da obra"
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-2.5 pl-10 pr-3.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </Field>
+                <Field icon={CalendarDays} label="Data">
+                  <input
+                    type="date"
+                    value={dataReferencia}
+                    onChange={e => setDataReferencia(e.target.value)}
+                    className="w-full sm:w-[11.75rem] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-2.5 pl-10 pr-2.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </Field>
               </div>
             </div>
-            <p className="mt-3 text-xs text-gray-500">
-              <span className="font-semibold text-gray-600 dark:text-gray-300">Escala:</span> 1 = Muito insatisfeito · 2 = Insatisfeito · 3 = Regular · 4 = Satisfeito · 5 = Muito satisfeito
-            </p>
+
+            {/* legenda da escala, nas mesmas cores dos botoes de nota */}
+            <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 px-5 sm:px-6 py-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">Como funciona a escala</p>
+              <div className="flex items-stretch gap-1.5">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <div key={n} className="flex-1 text-center">
+                    <div className={`h-1.5 rounded-full ${SCALE_LEGEND_BAR[n]}`} />
+                    <p className={`mt-1.5 text-xs font-bold ${SCORE_TEXT_5[n]}`}>{n}</p>
+                    <p className="mt-0.5 text-[10px] leading-tight text-gray-500 hidden sm:block">{RATING_LABELS[n]}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1.5 flex justify-between text-[10px] font-medium text-gray-400 sm:hidden">
+                <span>Muito insatisfeito</span>
+                <span>Muito satisfeito</span>
+              </div>
+            </div>
           </section>
 
           {SECTIONS.map(section => (
@@ -415,7 +475,7 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
                 'Como você avalia a Geoteste de forma geral?',
                 <RatingScale
                   value={avaliacaoGeral}
-                  onChange={v => { setAvaliacaoGeral(v); setHighlightKey(null); advanceFrom(GENERAL_KEY); }}
+                  onChange={v => { setAvaliacaoGeral(v); setHighlightKey(null); }}
                   toneFor={n => SCORE_TONE_5[n]}
                 />,
                 avaliacaoGeral ? (
@@ -427,7 +487,7 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
                 'Em uma escala de 0 a 10, qual a probabilidade de recomendar a Geoteste a um colega ou empresa?',
                 <RatingScale
                   value={nps}
-                  onChange={v => { setNps(v); setHighlightKey(null); advanceFrom(NPS_KEY); }}
+                  onChange={v => { setNps(v); setHighlightKey(null); }}
                   min={0}
                   max={10}
                   toneFor={npsTone}
