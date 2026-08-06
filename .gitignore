@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Saidas de automacao de browser (Playwright MCP / Chrome DevTools)
+.playwright-mcp/

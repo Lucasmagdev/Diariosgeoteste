@@ -190,6 +190,8 @@ declare
   ];
   v_key text;
   v_val integer;
+  v_recent integer;
+  v_total integer;
 begin
   select l.id, l.obra_id, l.expires_at, l.revoked_at
   into v_link
@@ -206,6 +208,21 @@ begin
   end if;
   if v_link.expires_at < now() then
     return jsonb_build_object('ok', false, 'reason', 'expired');
+  end if;
+
+  -- O link fica aberto para varias pessoas responderem, entao vale um freio:
+  -- sem isso, quem tiver o link consegue inundar a obra de respostas.
+  select count(*) filter (where created_at > now() - interval '20 seconds'),
+         count(*)
+  into v_recent, v_total
+  from public.satisfaction_survey_responses
+  where link_id = v_link.id;
+
+  if coalesce(v_recent, 0) > 0 then
+    return jsonb_build_object('ok', false, 'reason', 'too_fast');
+  end if;
+  if coalesce(v_total, 0) >= 200 then
+    return jsonb_build_object('ok', false, 'reason', 'link_full');
   end if;
 
   foreach v_key in array v_required_keys loop
@@ -241,10 +258,40 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------
+-- Admin corta os links de uma obra (link vazado, pesquisa encerrada).
+-- Respostas ja recebidas continuam intactas.
+-- ---------------------------------------------------------------------
+create or replace function public.revoke_satisfaction_survey_links(p_obra_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_count integer;
+begin
+  if v_uid is null or not public.is_admin(v_uid) then
+    raise exception 'Sem permissao para revogar links desta obra';
+  end if;
+
+  update public.satisfaction_survey_links
+  set revoked_at = now()
+  where obra_id = p_obra_id
+    and revoked_at is null;
+
+  get diagnostics v_count = row_count;
+  return jsonb_build_object('ok', true, 'revoked', v_count);
+end;
+$$;
+
 revoke all on function public.create_satisfaction_survey_link(uuid, integer) from public;
 revoke all on function public.get_satisfaction_survey_for_public_link(text) from public;
 revoke all on function public.submit_satisfaction_survey(text, jsonb) from public;
+revoke all on function public.revoke_satisfaction_survey_links(uuid) from public;
 
 grant execute on function public.create_satisfaction_survey_link(uuid, integer) to authenticated;
 grant execute on function public.get_satisfaction_survey_for_public_link(text) to anon, authenticated;
 grant execute on function public.submit_satisfaction_survey(text, jsonb) to anon, authenticated;
+grant execute on function public.revoke_satisfaction_survey_links(uuid) to authenticated;

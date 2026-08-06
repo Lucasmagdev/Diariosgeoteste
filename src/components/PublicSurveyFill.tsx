@@ -270,6 +270,8 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
           missing_ratings: 'Responda todas as avaliações antes de enviar.',
           missing_avaliacao_geral: 'Informe a avaliação geral.',
           missing_nps: 'Informe a probabilidade de recomendação.',
+          too_fast: 'Uma resposta acabou de ser enviada por este link. Aguarde alguns segundos e tente de novo.',
+          link_full: 'Este link já atingiu o limite de respostas. Peça um link novo à Geoteste.',
         };
         setSubmitError(reasons[data?.reason] || 'Não foi possível enviar a pesquisa.');
         return;

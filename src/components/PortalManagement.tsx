@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Plus, Building2, Edit, Trash2, Link as LinkIcon, KeyRound, Upload, FileText,
   CheckCircle2, XCircle, ChevronDown, ChevronRight, Paperclip, PenLine, Calendar, Image as ImageIcon, Lock,
-  ClipboardList, ListChecks, Camera, Eye, GripVertical, Download, Star,
+  ClipboardList, ListChecks, Camera, Eye, GripVertical, Download, Star, Ban,
 } from 'lucide-react';
 import { Client, Obra, ObraDocument, ObraDocumentCategory, PortalCredential, ChecklistTemplate, ChecklistTemplateItem, ObraChecklist, ObraChecklistItem, SatisfactionSurveyResponse } from '../types';
 import { useToast } from '../contexts/ToastContext';
@@ -613,6 +613,22 @@ export const PortalManagement: React.FC = () => {
 
   const [viewSurvey, setViewSurvey] = useState<SatisfactionSurveyResponse | null>(null);
   const [confirmSurvey, setConfirmSurvey] = useState<{ open: boolean; response?: SatisfactionSurveyResponse }>({ open: false });
+  const [confirmRevokeSurvey, setConfirmRevokeSurvey] = useState<{ open: boolean; obraId?: string }>({ open: false });
+
+  const revokeSurveyLinks = async () => {
+    const obraId = confirmRevokeSurvey.obraId;
+    if (!obraId) return;
+    try {
+      const { data, error } = await supabase.rpc('revoke_satisfaction_survey_links', { p_obra_id: obraId });
+      if (error) throw error;
+      toast.success(data?.revoked ? `${data.revoked} link(s) revogado(s).` : 'Nenhum link ativo para revogar.');
+    } catch (err) {
+      console.error('revoke_satisfaction_survey_links', err);
+      toast.error('Falha ao revogar links da pesquisa.');
+    } finally {
+      setConfirmRevokeSurvey({ open: false });
+    }
+  };
 
   const downloadSurveyPdf = async (r: SatisfactionSurveyResponse) => {
     try {
@@ -824,8 +840,22 @@ export const PortalManagement: React.FC = () => {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Pesquisa de satisfação ({(surveyResponsesByObra[o.id] || []).length})</h4>
-                        <button onClick={() => copySurveyLink(o.id)} className="btn-secondary flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4" /> Copiar link da pesquisa</button>
+                        <div className="flex flex-wrap gap-2">
+                          <button onClick={() => copySurveyLink(o.id)} className="btn-secondary flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4" /> Copiar link da pesquisa</button>
+                          <IconButton icon={Ban} label="Revogar links da pesquisa" tone="danger" onClick={() => setConfirmRevokeSurvey({ open: true, obraId: o.id })} />
+                        </div>
                       </div>
+                      {(surveyResponsesByObra[o.id] || []).length > 0 && (() => {
+                        const rs = surveyResponsesByObra[o.id];
+                        const avg = (nums: number[]) => (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1);
+                        return (
+                          <div className="mb-3 flex flex-wrap gap-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950/40 px-3 py-2 text-xs">
+                            <span className="text-gray-500">Média geral: <strong className="text-gray-900 dark:text-white">{avg(rs.map(r => r.avaliacaoGeral))}</strong>/5</span>
+                            <span className="text-gray-500">NPS médio: <strong className="text-gray-900 dark:text-white">{avg(rs.map(r => r.nps))}</strong>/10</span>
+                            <span className="text-gray-500">Promotores: <strong className="text-gray-900 dark:text-white">{rs.filter(r => r.nps >= 9).length}</strong> · Detratores: <strong className="text-gray-900 dark:text-white">{rs.filter(r => r.nps <= 6).length}</strong></span>
+                          </div>
+                        );
+                      })()}
                       {(surveyResponsesByObra[o.id] || []).length === 0 ? (
                         <p className="text-sm text-gray-400">Nenhuma resposta recebida ainda.</p>
                       ) : (
@@ -1186,6 +1216,14 @@ export const PortalManagement: React.FC = () => {
         title="Remover resposta"
         message={`Remover a resposta de "${confirmSurvey.response?.empresa || 'empresa não informada'}"?`}
         confirmText="Remover" cancelText="Cancelar" type="danger"
+      />
+      <ConfirmDialog
+        isOpen={confirmRevokeSurvey.open}
+        onClose={() => setConfirmRevokeSurvey({ open: false })}
+        onConfirm={revokeSurveyLinks}
+        title="Revogar links da pesquisa"
+        message="Os links já enviados desta obra param de funcionar imediatamente. As respostas recebidas continuam salvas. Para coletar de novo, gere um link novo."
+        confirmText="Revogar" cancelText="Cancelar" type="danger"
       />
     </div>
   );
