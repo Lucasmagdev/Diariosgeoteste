@@ -82,13 +82,18 @@ const SCALE_LEGEND_BAR: Record<number, string> = {
   5: 'bg-emerald-600',
 };
 
-const Field: React.FC<{ icon: LucideIcon; label: string; children: React.ReactNode }> = ({ icon: Icon, label, children }) => (
-  <div>
-    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">{label}</label>
-    <div className="relative">
-      <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-600/70" />
-      {children}
-    </div>
+/** Datas puras (YYYY-MM-DD) formatadas sem new Date(), que as leria como UTC. */
+const formatDateBR = (value: string): string => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((value || '').trim());
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (value || '—');
+};
+
+const IdentityCell: React.FC<{ icon: LucideIcon; label: string; value: string; className?: string }> = ({ icon: Icon, label, value, className = '' }) => (
+  <div className={`bg-emerald-900/20 px-4 py-3 ${className}`}>
+    <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-100/70">
+      <Icon className="h-3 w-3" /> {label}
+    </p>
+    <p className="mt-1 text-sm font-semibold leading-snug text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden" title={value}>{value}</p>
   </div>
 );
 
@@ -146,7 +151,7 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
 
   const [empresa, setEmpresa] = useState('');
   const [obraNome, setObraNome] = useState('');
-  const [dataReferencia, setDataReferencia] = useState(todayIso());
+  const [dataReferencia] = useState(todayIso());
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [avaliacaoGeral, setAvaliacaoGeral] = useState<number | null>(null);
   const [nps, setNps] = useState<number | null>(null);
@@ -394,41 +399,18 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
                 </div>
               </div>
             </div>
+
+            {/* identificacao: vem do proprio link, o cliente nao precisa digitar */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-px border-t border-white/15 bg-white/10">
+              <IdentityCell icon={Building2} label="Empresa" value={empresa || '—'} />
+              <IdentityCell icon={MapPin} label="Obra" value={obraNome || '—'} />
+              <IdentityCell icon={CalendarDays} label="Data" value={formatDateBR(dataReferencia)} className="col-span-2 sm:col-span-1" />
+            </div>
           </header>
 
-          {/* identificacao */}
+          {/* legenda da escala, nas mesmas cores dos botoes de nota */}
           <section className="overflow-hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 scroll-animate-up">
-            <div className="p-5 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 sm:gap-4">
-                <Field icon={Building2} label="Empresa">
-                  <input
-                    value={empresa}
-                    onChange={e => setEmpresa(e.target.value)}
-                    placeholder="Nome da empresa"
-                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-2.5 pl-10 pr-3.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </Field>
-                <Field icon={MapPin} label="Obra">
-                  <input
-                    value={obraNome}
-                    onChange={e => setObraNome(e.target.value)}
-                    placeholder="Nome da obra"
-                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-2.5 pl-10 pr-3.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </Field>
-                <Field icon={CalendarDays} label="Data">
-                  <input
-                    type="date"
-                    value={dataReferencia}
-                    onChange={e => setDataReferencia(e.target.value)}
-                    className="w-full sm:w-[11.75rem] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-2.5 pl-10 pr-2.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </Field>
-              </div>
-            </div>
-
-            {/* legenda da escala, nas mesmas cores dos botoes de nota */}
-            <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 px-5 sm:px-6 py-4">
+            <div className="px-5 sm:px-6 py-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">Como funciona a escala</p>
               <div className="flex items-stretch gap-1.5">
                 {[1, 2, 3, 4, 5].map(n => (
