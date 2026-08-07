@@ -9,6 +9,7 @@
 create table if not exists public.satisfaction_survey_links (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
+  token text,
   token_hash text not null unique,
   created_by uuid not null references auth.users(id) on delete cascade,
   expires_at timestamp with time zone not null,
@@ -19,6 +20,9 @@ create table if not exists public.satisfaction_survey_links (
 
 create index if not exists idx_satisfaction_survey_links_obra_id on public.satisfaction_survey_links(obra_id);
 create index if not exists idx_satisfaction_survey_links_expires_at on public.satisfaction_survey_links(expires_at);
+create unique index if not exists idx_satisfaction_survey_links_token
+  on public.satisfaction_survey_links(token)
+  where token is not null;
 
 alter table public.satisfaction_survey_links enable row level security;
 
@@ -81,7 +85,10 @@ create policy "satisfaction_survey_responses_delete_admin"
   using (public.is_admin(auth.uid()));
 
 -- ---------------------------------------------------------------------
--- Admin gera o link da pesquisa para uma obra
+-- Admin gera o link da pesquisa para uma obra. Se ja existe um link
+-- ativo (nao revogado, nao expirado) para essa obra, devolve o mesmo
+-- token de novo com a validade renovada, em vez de criar outro — assim
+-- "Copiar link" sempre da o mesmo link ate ele ser revogado.
 -- ---------------------------------------------------------------------
 create or replace function public.create_satisfaction_survey_link(
   p_obra_id uuid,
@@ -94,6 +101,7 @@ set search_path = public
 as $$
 declare
   v_uid uuid := auth.uid();
+  v_existing record;
   v_token text;
   v_token_hash text;
   v_expires_at timestamp with time zone;
@@ -106,12 +114,27 @@ begin
     raise exception 'Obra nao encontrada';
   end if;
 
-  v_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
-  v_token_hash := public.hash_diary_signature_token(v_token);
   v_expires_at := now() + make_interval(hours => greatest(coalesce(p_expires_hours, 720), 1));
 
-  insert into public.satisfaction_survey_links (obra_id, token_hash, created_by, expires_at)
-  values (p_obra_id, v_token_hash, v_uid, v_expires_at);
+  select id, token into v_existing
+  from public.satisfaction_survey_links
+  where obra_id = p_obra_id
+    and revoked_at is null
+    and expires_at > now()
+    and token is not null
+  order by created_at desc
+  limit 1;
+
+  if found then
+    update public.satisfaction_survey_links set expires_at = v_expires_at where id = v_existing.id;
+    return jsonb_build_object('token', v_existing.token, 'expires_at', v_expires_at, 'obra_id', p_obra_id);
+  end if;
+
+  v_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+  v_token_hash := public.hash_diary_signature_token(v_token);
+
+  insert into public.satisfaction_survey_links (obra_id, token, token_hash, created_by, expires_at)
+  values (p_obra_id, v_token, v_token_hash, v_uid, v_expires_at);
 
   return jsonb_build_object('token', v_token, 'expires_at', v_expires_at, 'obra_id', p_obra_id);
 end;
