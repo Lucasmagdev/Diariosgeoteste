@@ -244,7 +244,6 @@ grant execute on function public.create_checklist_signature_link(uuid, integer) 
 create table if not exists public.satisfaction_survey_links (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
-  token text,
   token_hash text not null unique,
   created_by uuid not null references auth.users(id) on delete cascade,
   expires_at timestamp with time zone not null,
@@ -252,6 +251,11 @@ create table if not exists public.satisfaction_survey_links (
   last_accessed_at timestamp with time zone,
   created_at timestamp with time zone not null default now()
 );
+
+-- "create table if not exists" nao adiciona coluna em tabela que ja existe
+-- (ex: de uma tentativa anterior) — por isso o token entra via alter table,
+-- nao dentro do create table.
+alter table public.satisfaction_survey_links add column if not exists token text;
 
 create index if not exists idx_satisfaction_survey_links_obra_id on public.satisfaction_survey_links(obra_id);
 create index if not exists idx_satisfaction_survey_links_expires_at on public.satisfaction_survey_links(expires_at);
