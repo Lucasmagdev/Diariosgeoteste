@@ -441,7 +441,8 @@ export const estadosCidades: Estado[] = [
       { id: 57, nome: "Guaxupé" },
       { id: 58, nome: "São Lourenço" },
       { id: 59, nome: "Extrema" },
-      { id: 60, nome: "Congonhas" }
+      { id: 60, nome: "Congonhas" },
+      { id: 61, nome: "Brumadinho" }
     ]
   },
   {

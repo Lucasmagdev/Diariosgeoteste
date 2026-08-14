@@ -5,7 +5,7 @@ export interface PITPile {
   estacaNome: string;
   estacaTipo: string;
   diametroCm: string;
-  profundidadeCm: string;
+  profundidadeM: string;
   arrasamentoM: string;
   comprimentoUtilM: string;
   confirmado?: boolean;
@@ -42,7 +42,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
         estacaNome: '',
         estacaTipo: '',
         diametroCm: '',
-        profundidadeCm: '',
+        profundidadeM: '',
         arrasamentoM: '',
         comprimentoUtilM: '',
         confirmado: false,
@@ -57,7 +57,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
       const hasData = pile.estacaNome.trim() || 
                      pile.estacaTipo.trim() || 
                      pile.diametroCm.trim() || 
-                     pile.profundidadeCm.trim() || 
+                     pile.profundidadeM.trim() || 
                      pile.arrasamentoM.trim() || 
                      pile.comprimentoUtilM.trim();
       
@@ -82,7 +82,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
     return !pile.estacaNome.trim() && 
            !pile.estacaTipo.trim() && 
            !pile.diametroCm.trim() && 
-           !pile.profundidadeCm.trim() && 
+           !pile.profundidadeM.trim() && 
            !pile.arrasamentoM.trim() && 
            !pile.comprimentoUtilM.trim();
   };
@@ -91,7 +91,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
     setField((d) => {
       d.piles.splice(index, 1);
       if (d.piles.length === 0) {
-        d.piles.push({ estacaNome: '', estacaTipo: '', diametroCm: '', profundidadeCm: '', arrasamentoM: '', comprimentoUtilM: '' });
+        d.piles.push({ estacaNome: '', estacaTipo: '', diametroCm: '', profundidadeM: '', arrasamentoM: '', comprimentoUtilM: '' });
       }
     });
   };
@@ -163,7 +163,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
                         {[
                           pile.estacaTipo && `Tipo: ${pile.estacaTipo}`,
                           pile.diametroCm && `Ø: ${pile.diametroCm}cm`,
-                          pile.profundidadeCm && `Prof: ${pile.profundidadeCm}cm`,
+                          pile.profundidadeM && `Prof: ${pile.profundidadeM}m`,
                           pile.comprimentoUtilM && `Comp: ${pile.comprimentoUtilM}m`
                         ].filter(Boolean).join(' • ')}
                       </div>
@@ -250,14 +250,14 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Profundidade (cm)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Profundidade (m)</label>
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={pile.profundidadeCm}
-                    onChange={(e) => updatePile(index, (p) => { p.profundidadeCm = e.target.value; })}
+                    value={pile.profundidadeM}
+                    onChange={(e) => updatePile(index, (p) => { p.profundidadeM = e.target.value; })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Ex.: 1200"
+                    placeholder="Ex.: 12,00"
                   />
                 </div>
                 <div>

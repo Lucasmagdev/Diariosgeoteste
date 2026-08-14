@@ -92,7 +92,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
   const [pitData, setPitData] = useState<PITFormData>({
     equipamento: '',
     piles: [
-      { estacaNome: '', estacaTipo: '', diametroCm: '', profundidadeCm: '', arrasamentoM: '', comprimentoUtilM: '', confirmado: false, isExpanded: true }
+      { estacaNome: '', estacaTipo: '', diametroCm: '', profundidadeM: '', arrasamentoM: '', comprimentoUtilM: '', confirmado: false, isExpanded: true }
     ],
     ocorrencias: '',
     totalEstacas: ''
@@ -480,7 +480,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
             estaca_nome: pile.estacaNome || null,
             estaca_tipo: pile.estacaTipo || null,
             diametro_cm: pile.diametroCm || null,
-            profundidade_cm: pile.profundidadeCm || null,
+            profundidade_m: pile.profundidadeM || null,
             arrasamento_m: pile.arrasamentoM || null,
             comprimento_util_m: pile.comprimentoUtilM || null,
           }));

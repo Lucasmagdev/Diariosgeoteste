@@ -122,7 +122,7 @@ export function mapDiaryToExcelRow(d: {
     
     if (d.pitPiles && d.pitPiles.length > 0) {
       baseRow['PIT - Estacas'] = d.pitPiles.map((p: any) => 
-        `${p.nome}: ${p.tipo}, Ø${p.diametro_cm}cm, Prof: ${p.profundidade_cm}cm, Arr: ${p.arrasamento_m}m, Útil: ${p.comprimento_util_m}m`
+        `${p.nome}: ${p.tipo}, Ø${p.diametro_cm}cm, Prof: ${p.profundidade_m}m, Arr: ${p.arrasamento_m}m, Útil: ${p.comprimento_util_m}m`
       ).join(' | ');
     }
   }

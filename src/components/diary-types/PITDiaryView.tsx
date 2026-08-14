@@ -49,7 +49,7 @@ export const PITDiaryView: React.FC<PITDiaryViewProps> = ({ diary, pitDetail = {
               'Estaca',
               'Tipo',
               'Diâmetro (cm)',
-              'Profundidade (cm)',
+              'Profundidade (m)',
               'Arrasamento (m)',
               'Comprimento útil (m)',
             ]}
@@ -59,7 +59,7 @@ export const PITDiaryView: React.FC<PITDiaryViewProps> = ({ diary, pitDetail = {
               pile.estaca_nome || '-',
               pile.estaca_tipo || '-',
               pile.diametro_cm || '-',
-              pile.profundidade_cm || '-',
+              pile.profundidade_m || '-',
               pile.arrasamento_m || '-',
               pile.comprimento_util_m || '-',
             ])}

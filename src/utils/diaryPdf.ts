@@ -592,8 +592,8 @@ async function buildDiaryDoc(data: DiaryPdfData): Promise<jsPDF> {
 
     sectionTitle('Estacas');
     table(
-      ['Estaca', 'Tipo', 'Diâm. (cm)', 'Prof. (cm)', 'Arrasamento (m)', 'Comp. útil (m)'],
-      pitPiles.map((p) => [orNI(p.estaca_nome), orNI(p.estaca_tipo), orNI(p.diametro_cm), orNI(p.profundidade_cm), orNI(p.arrasamento_m), orNI(p.comprimento_util_m)]),
+      ['Estaca', 'Tipo', 'Diâm. (cm)', 'Prof. (m)', 'Arrasamento (m)', 'Comp. útil (m)'],
+      pitPiles.map((p) => [orNI(p.estaca_nome), orNI(p.estaca_tipo), orNI(p.diametro_cm), orNI(p.profundidade_m), orNI(p.arrasamento_m), orNI(p.comprimento_util_m)]),
       [0.9, 0.9, 1, 1, 1, 1.2],
     );
 
