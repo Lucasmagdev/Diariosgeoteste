@@ -8,6 +8,7 @@
 -- 2) add_relatorio_pin.sql              — PIN nos relatorios do portal
 -- 3) add_checklist_link_stable_token.sql — link do checklist para de trocar sozinho
 -- 4) create_satisfaction_survey.sql      — pesquisa de satisfacao
+-- 5) rename_pit_profundidade_para_metros.sql — profundidade do PIT de cm pra m
 -- =====================================================================
 
 
@@ -536,6 +537,29 @@ grant execute on function public.create_satisfaction_survey_link(uuid, integer) 
 grant execute on function public.get_satisfaction_survey_for_public_link(text) to anon, authenticated;
 grant execute on function public.submit_satisfaction_survey(text, jsonb) to anon, authenticated;
 grant execute on function public.revoke_satisfaction_survey_links(uuid) to authenticated;
+
+-- =====================================================================
+-- 5) rename_pit_profundidade_para_metros.sql
+-- PIT: "Profundidade" passa de centimetro para metro. Guardado num DO
+-- block que confere se a coluna profundidade_cm ainda existe: se ja
+-- rodou antes, pula tudo — sem isso, rodar de novo dividiria os valores
+-- por 100 outra vez.
+-- =====================================================================
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'work_diaries_pit_piles'
+      and column_name = 'profundidade_cm'
+  ) then
+    alter table public.work_diaries_pit_piles rename column profundidade_cm to profundidade_m;
+    update public.work_diaries_pit_piles
+    set profundidade_m = round(profundidade_m / 100.0, 2)
+    where profundidade_m is not null;
+  end if;
+end $$;
 
 -- =====================================================================
 -- FIM. Se rodou sem erro, pode conferir: gera um link de pesquisa numa
