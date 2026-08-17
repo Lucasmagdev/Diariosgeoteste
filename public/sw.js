@@ -1,70 +1,63 @@
 // Service Worker para PWA - Geoteste
-const CACHE_NAME = 'geoteste-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
+//
+// v1 cacheava "/" e "/index.html" com estrategia cache-first sem nunca
+// expirar: uma vez visitado, o navegador ficava preso pra sempre no HTML
+// (e portanto no bundle JS com hash) da visita, porque o cache nunca era
+// invalidado entre deploys (nome de cache fixo) e o fetch handler nunca
+// ia na rede se ja tinha algo em cache. Todo deploy novo ficava invisivel
+// pra quem ja tinha aberto o site antes.
+//
+// v2: HTML/navegacao sempre busca rede primeiro (cai pro cache soh se
+// estiver offline). So os assets com hash no nome (imutaveis por build,
+// em /assets/) usam cache-first.
+const CACHE_NAME = 'geoteste-v2';
+const PRECACHE_URLS = [
   '/logogeoteste.png',
   '/logogeoteste.jpeg',
-  '/manifest.json'
+  '/manifest.json',
 ];
 
-// Instalação do Service Worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Cache aberto');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((cacheNames) => Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Ativação do Service Worker
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Removendo cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const isNavigation = request.mode === 'navigate' || request.destination === 'document';
+  if (isNavigation) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request.clone()).then((response) => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
+        }
+        return response;
+      });
     })
   );
 });
-
-// Interceptação de requisições
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - retorna a resposta do cache
-        if (response) {
-          return response;
-        }
-
-        // Clone a requisição
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then((response) => {
-          // Verifica se a resposta é válida
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone a resposta
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
-          return response;
-        });
-      })
-  );
-});
-
