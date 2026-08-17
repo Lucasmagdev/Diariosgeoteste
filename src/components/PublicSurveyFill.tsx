@@ -194,8 +194,6 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
         return;
       }
       setSurvey({ obra_name: data.obra_name, client_name: data.client_name });
-      setEmpresa(data.client_name || '');
-      setObraNome(data.obra_name || '');
     } catch (err) {
       console.error('get_satisfaction_survey_for_public_link', err);
       setError('Não foi possível carregar a pesquisa.');
