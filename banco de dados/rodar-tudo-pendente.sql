@@ -433,7 +433,7 @@ declare
   v_nps integer := nullif(p_payload->>'nps', '')::integer;
   v_required_keys text[] := array[
     'comercial_atendimento', 'comercial_agilidade', 'comercial_clareza',
-    'operacional_prazos', 'operacional_organizacao_campo', 'operacional_qualidade_execucao', 'operacional_organizacao_operacao',
+    'operacional_organizacao_campo', 'operacional_qualidade_execucao', 'operacional_prazos_operacao',
     'documentacao_prazo_entrega', 'documentacao_clareza_relatorios', 'documentacao_atendimento'
   ];
   v_key text;

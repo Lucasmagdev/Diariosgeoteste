@@ -28,10 +28,9 @@ const SECTIONS: RatingSection[] = [
   {
     title: 'Operacional',
     questions: [
-      { key: 'operacional_prazos', label: 'Cumprimento dos prazos acordados.' },
       { key: 'operacional_organizacao_campo', label: 'Organização e profissionalismo da equipe em campo.' },
       { key: 'operacional_qualidade_execucao', label: 'Qualidade na execução dos ensaios geotécnicos.' },
-      { key: 'operacional_organizacao_operacao', label: 'Organização e profissionalismo da equipe responsável pela operação.' },
+      { key: 'operacional_prazos_operacao', label: 'Cumprimento dos prazos e organização da equipe responsável pela operação.' },
     ],
   },
   {
