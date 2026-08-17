@@ -97,6 +97,22 @@ const IdentityCell: React.FC<{ icon: LucideIcon; label: string; value: string; c
   </div>
 );
 
+// Empresa/Obra vem pre-preenchido pelo link, mas o cliente pode corrigir
+// (nome errado no cadastro, obra com apelido diferente, etc.).
+const IdentityInputCell: React.FC<{ icon: LucideIcon; label: string; value: string; onChange: (v: string) => void; className?: string }> = ({ icon: Icon, label, value, onChange, className = '' }) => (
+  <div className={`bg-emerald-900/20 px-4 py-3 ${className}`}>
+    <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-100/70">
+      <Icon className="h-3 w-3" /> {label}
+    </label>
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="mt-1 w-full bg-transparent text-sm font-semibold leading-snug text-white placeholder-emerald-100/50 outline-none border-b border-white/0 focus:border-white/40 transition-colors"
+      placeholder={label}
+    />
+  </div>
+);
+
 const npsTone = (n: number) => {
   if (n <= 6) return 'border-red-500 bg-red-500 text-white shadow-red-500/30';
   if (n <= 8) return 'border-amber-500 bg-amber-500 text-white shadow-amber-500/30';
@@ -402,8 +418,8 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
 
             {/* identificacao: vem do proprio link, o cliente nao precisa digitar */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-px border-t border-white/15 bg-white/10">
-              <IdentityCell icon={Building2} label="Empresa" value={empresa || '—'} />
-              <IdentityCell icon={MapPin} label="Obra" value={obraNome || '—'} />
+              <IdentityInputCell icon={Building2} label="Empresa" value={empresa} onChange={setEmpresa} />
+              <IdentityInputCell icon={MapPin} label="Obra" value={obraNome} onChange={setObraNome} />
               <IdentityCell icon={CalendarDays} label="Data" value={formatDateBR(dataReferencia)} className="col-span-2 sm:col-span-1" />
             </div>
           </header>
