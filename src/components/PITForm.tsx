@@ -1,6 +1,23 @@
 import React from 'react';
 import { Edit, Check } from 'lucide-react';
 
+const parseBR = (value: string): number | null => {
+  const t = (value || '').trim().replace(',', '.');
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+};
+const formatBR = (n: number): string => n.toFixed(2).replace('.', ',');
+
+// Comprimento util = profundidade menos o trecho arrasado no topo da estaca.
+// Calculado sozinho pra evitar erro de conta manual; some se faltar um dos dois.
+const calcComprimentoUtilM = (profundidadeM: string, arrasamentoM: string): string => {
+  const p = parseBR(profundidadeM);
+  const a = parseBR(arrasamentoM);
+  if (p === null || a === null) return '';
+  return formatBR(p - a);
+};
+
 export interface PITPile {
   estacaNome: string;
   estacaTipo: string;
@@ -255,7 +272,10 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
                     type="text"
                     inputMode="decimal"
                     value={pile.profundidadeM}
-                    onChange={(e) => updatePile(index, (p) => { p.profundidadeM = e.target.value; })}
+                    onChange={(e) => updatePile(index, (p) => {
+                      p.profundidadeM = e.target.value;
+                      p.comprimentoUtilM = calcComprimentoUtilM(p.profundidadeM, p.arrasamentoM);
+                    })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Ex.: 12,00"
                   />
@@ -266,7 +286,10 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
                     type="text"
                     inputMode="decimal"
                     value={pile.arrasamentoM}
-                    onChange={(e) => updatePile(index, (p) => { p.arrasamentoM = e.target.value; })}
+                    onChange={(e) => updatePile(index, (p) => {
+                      p.arrasamentoM = e.target.value;
+                      p.comprimentoUtilM = calcComprimentoUtilM(p.profundidadeM, p.arrasamentoM);
+                    })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Ex.: 0,30"
                   />
@@ -275,12 +298,12 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Comprimento útil (m)</label>
                   <input
                     type="text"
-                    inputMode="decimal"
+                    readOnly
                     value={pile.comprimentoUtilM}
-                    onChange={(e) => updatePile(index, (p) => { p.comprimentoUtilM = e.target.value; })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Ex.: 9,50"
+                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 cursor-not-allowed"
+                    placeholder="Profundidade − Arrasamento"
                   />
+                  <p className="mt-1 text-xs text-gray-400">Calculado automaticamente</p>
                 </div>
               </div>
             </div>
