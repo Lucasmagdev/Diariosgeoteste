@@ -29,6 +29,18 @@ interface Client {
   address?: string;
 }
 
+// Colunas numeric() do Postgres nao aceitam virgula como separador decimal.
+// Os placeholders dos formularios (PCE, PIT) pedem valor em formato BR
+// ("Ex.: 12,5"), entao sem essa conversao o insert falha inteiro assim que
+// alguem digita um decimal — e a estaca some (o registro pai salva, o
+// insert das estacas quebra e nao mostra nada na hora de ver/baixar o PDF).
+const toDecimalOrNull = (value: string | null | undefined): number | null => {
+  const trimmed = (value || '').trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+};
+
 const normalizeClientsList = (rows: any[] = []): Client[] => {
   return rows.map((row: any, index: number) => {
     const rawName = typeof row?.name === 'string' ? row.name.trim() : '';
@@ -421,29 +433,16 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
             pce_id: pceId,
             ordem: idx + 1,
             estaca_nome: pile.estacaNome || null,
-            estaca_profundidade_m: pile.estacaProfundidadeM || null,
+            estaca_profundidade_m: toDecimalOrNull(pile.estacaProfundidadeM),
             estaca_tipo: pile.estacaTipo || null,
-            estaca_carga_trabalho_tf: pile.estacaCargaTrabalhoTf || null,
-            estaca_carga_ensaio_tf: pile.estacaCargaEnsaioTf || null,
-            estaca_diametro_cm: pile.estacaDiametroCm || null,
-          }));
-
-          // compatibilidade com nome da coluna pce_id na SQL criada
-          // a tabela está como work_diaries_pce_piles(pce_id ...)
-          const mapped = pilesPayload.map((p) => ({
-            pce_id: p.pce_id,
-            ordem: p.ordem,
-            estaca_nome: p.estaca_nome,
-            estaca_profundidade_m: p.estaca_profundidade_m,
-            estaca_tipo: p.estaca_tipo,
-            estaca_carga_trabalho_tf: p.estaca_carga_trabalho_tf,
-            estaca_carga_ensaio_tf: p.estaca_carga_ensaio_tf,
-            estaca_diametro_cm: p.estaca_diametro_cm,
+            estaca_carga_trabalho_tf: toDecimalOrNull(pile.estacaCargaTrabalhoTf),
+            estaca_carga_ensaio_tf: toDecimalOrNull(pile.estacaCargaEnsaioTf),
+            estaca_diametro_cm: toDecimalOrNull(pile.estacaDiametroCm),
           }));
 
           const { error: pilesError } = await supabase
             .from('work_diaries_pce_piles')
-            .insert(mapped);
+            .insert(pilesPayload);
           if (pilesError) {
             setError('Erro ao salvar estacas. Tente novamente.');
             setIsSubmitting(false);
@@ -479,10 +478,10 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
             ordem: idx + 1,
             estaca_nome: pile.estacaNome || null,
             estaca_tipo: pile.estacaTipo || null,
-            diametro_cm: pile.diametroCm || null,
-            profundidade_m: pile.profundidadeM || null,
-            arrasamento_m: pile.arrasamentoM || null,
-            comprimento_util_m: pile.comprimentoUtilM || null,
+            diametro_cm: toDecimalOrNull(pile.diametroCm),
+            profundidade_m: toDecimalOrNull(pile.profundidadeM),
+            arrasamento_m: toDecimalOrNull(pile.arrasamentoM),
+            comprimento_util_m: toDecimalOrNull(pile.comprimentoUtilM),
           }));
 
           const { error: pitPilesError } = await supabase
