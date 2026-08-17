@@ -96,22 +96,6 @@ const IdentityCell: React.FC<{ icon: LucideIcon; label: string; value: string; c
   </div>
 );
 
-// Empresa/Obra vem pre-preenchido pelo link, mas o cliente pode corrigir
-// (nome errado no cadastro, obra com apelido diferente, etc.).
-const IdentityInputCell: React.FC<{ icon: LucideIcon; label: string; value: string; onChange: (v: string) => void; className?: string }> = ({ icon: Icon, label, value, onChange, className = '' }) => (
-  <div className={`bg-emerald-900/20 px-4 py-3 ${className}`}>
-    <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-100/70">
-      <Icon className="h-3 w-3" /> {label}
-    </label>
-    <input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="mt-1 w-full bg-transparent text-sm font-semibold leading-snug text-white placeholder-emerald-100/50 outline-none border-b border-white/0 focus:border-white/40 transition-colors"
-      placeholder={label}
-    />
-  </div>
-);
-
 const npsTone = (n: number) => {
   if (n <= 6) return 'border-red-500 bg-red-500 text-white shadow-red-500/30';
   if (n <= 8) return 'border-amber-500 bg-amber-500 text-white shadow-amber-500/30';
@@ -413,13 +397,49 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
               </div>
             </div>
 
-            {/* identificacao: vem do proprio link, o cliente nao precisa digitar */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-px border-t border-white/15 bg-white/10">
-              <IdentityInputCell icon={Building2} label="Empresa" value={empresa} onChange={setEmpresa} />
-              <IdentityInputCell icon={MapPin} label="Obra" value={obraNome} onChange={setObraNome} />
-              <IdentityCell icon={CalendarDays} label="Data" value={formatDateBR(dataReferencia)} className="col-span-2 sm:col-span-1" />
+            {/* data: informativa, vem do proprio link */}
+            <div className="grid grid-cols-1 gap-px border-t border-white/15 bg-white/10">
+              <IdentityCell icon={CalendarDays} label="Data" value={formatDateBR(dataReferencia)} />
             </div>
           </header>
+
+          {/* identificacao: o cliente preenche pra abrir a pesquisa, tem que ficar obvio */}
+          <section className="rounded-2xl bg-white dark:bg-gray-900 border-2 border-emerald-200 dark:border-emerald-900/60 p-5 sm:p-6 scroll-animate-up">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-300 mb-4 flex items-center gap-2">
+              <span className="h-4 w-1 rounded-full bg-emerald-600" />
+              Identificação
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1.5">
+                  Empresa <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-600" />
+                  <input
+                    value={empresa}
+                    onChange={(e) => setEmpresa(e.target.value)}
+                    placeholder="Nome da empresa"
+                    className="w-full rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-3 pl-10 pr-3.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1.5">
+                  Obra <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-600" />
+                  <input
+                    value={obraNome}
+                    onChange={(e) => setObraNome(e.target.value)}
+                    placeholder="Nome da obra"
+                    className="w-full rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 py-3 pl-10 pr-3.5 text-gray-900 dark:text-gray-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* legenda da escala, nas mesmas cores dos botoes de nota */}
           <section className="overflow-hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 scroll-animate-up">
