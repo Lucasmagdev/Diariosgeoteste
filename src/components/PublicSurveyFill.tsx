@@ -541,11 +541,11 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
               <span className="ml-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-gray-500">opcional</span>
             </h2>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">O que mais lhe agradou em nosso atendimento?</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Quais foram os principais pontos positivos da sua experiência com os serviços prestados pela Geoteste?</label>
               <textarea value={comentarioAgradou} onChange={e => setComentarioAgradou(e.target.value)} rows={2} className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3.5 py-2.5 text-gray-900 dark:text-gray-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Há algum ponto que podemos melhorar?</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Quais aspectos dos serviços prestados pela Geoteste você considera que poderiam ser melhorados?</label>
               <textarea value={comentarioMelhorar} onChange={e => setComentarioMelhorar(e.target.value)} rows={2} className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3.5 py-2.5 text-gray-900 dark:text-gray-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition" />
             </div>
             <div>
