@@ -73,6 +73,7 @@ const mapSurveyResponse = (r: any): SatisfactionSurveyResponse => ({
   id: r.id, obraId: r.obra_id, linkId: r.link_id,
   empresa: r.empresa, obraNome: r.obra_nome, dataReferencia: r.data_referencia,
   ratings: r.ratings || {}, avaliacaoGeral: r.avaliacao_geral, nps: r.nps,
+  indicacaoEmpresas: r.indicacao_empresas,
   comentarioAgradou: r.comentario_agradou, comentarioMelhorar: r.comentario_melhorar, comentarioObservacao: r.comentario_observacao,
   createdAt: r.created_at,
 });
@@ -84,6 +85,7 @@ const SURVEY_RATING_LABELS: Record<string, string> = {
   operacional_organizacao_campo: 'Organização e profissionalismo em campo',
   operacional_qualidade_execucao: 'Qualidade na execução dos ensaios',
   operacional_prazos_operacao: 'Cumprimento dos prazos e organização da operação',
+  operacional_atendimento_medicao: 'Atendimento da equipe responsável pela medição',
   documentacao_prazo_entrega: 'Prazo de entrega dos relatórios',
   documentacao_clareza_relatorios: 'Clareza e qualidade técnica dos relatórios',
   documentacao_atendimento: 'Atendimento da equipe de documentação',
@@ -635,6 +637,7 @@ export const PortalManagement: React.FC = () => {
         obraName: r.obraNome, empresa: r.empresa, dataReferencia: r.dataReferencia, createdAt: r.createdAt,
         ratings: Object.entries(r.ratings || {}).map(([key, value]) => ({ label: SURVEY_RATING_LABELS[key] || key, value: value as number })),
         avaliacaoGeral: r.avaliacaoGeral, nps: r.nps,
+        indicacaoEmpresas: r.indicacaoEmpresas,
         comentarioAgradou: r.comentarioAgradou, comentarioMelhorar: r.comentarioMelhorar, comentarioObservacao: r.comentarioObservacao,
       }, `pesquisa-satisfacao-${(r.empresa || 'resposta').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`);
     } catch (err) {
@@ -1153,6 +1156,12 @@ export const PortalManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-900 dark:text-white">NPS (recomendação)</p>
                 <StatusBadge variant={viewSurvey.nps >= 9 ? 'success' : viewSurvey.nps >= 7 ? 'warning' : 'danger'}>{viewSurvey.nps}/10</StatusBadge>
               </div>
+              {viewSurvey.indicacaoEmpresas && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Empresas indicadas</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">{viewSurvey.indicacaoEmpresas}</p>
+                </div>
+              )}
               {viewSurvey.comentarioAgradou && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">O que mais agradou</p>

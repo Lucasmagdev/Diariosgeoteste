@@ -31,6 +31,7 @@ const SECTIONS: RatingSection[] = [
       { key: 'operacional_organizacao_campo', label: 'Organização e profissionalismo da equipe em campo.' },
       { key: 'operacional_qualidade_execucao', label: 'Qualidade na execução dos ensaios geotécnicos.' },
       { key: 'operacional_prazos_operacao', label: 'Cumprimento dos prazos e organização da equipe responsável pela operação.' },
+      { key: 'operacional_atendimento_medicao', label: 'Atendimento da equipe responsável pela medição.' },
     ],
   },
   {
@@ -154,6 +155,7 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [avaliacaoGeral, setAvaliacaoGeral] = useState<number | null>(null);
   const [nps, setNps] = useState<number | null>(null);
+  const [indicacaoEmpresas, setIndicacaoEmpresas] = useState('');
   const [comentarioAgradou, setComentarioAgradou] = useState('');
   const [comentarioMelhorar, setComentarioMelhorar] = useState('');
   const [comentarioObservacao, setComentarioObservacao] = useState('');
@@ -258,6 +260,7 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
         ratings,
         avaliacao_geral: avaliacaoGeral,
         nps,
+        indicacao_empresas: indicacaoEmpresas.trim(),
         comentario_agradou: comentarioAgradou.trim(),
         comentario_melhorar: comentarioMelhorar.trim(),
         comentario_observacao: comentarioObservacao.trim(),
@@ -515,6 +518,20 @@ export const PublicSurveyFill: React.FC<PublicSurveyFillProps> = ({ token }) => 
                   </p>
                 ) : null,
               )}
+            </div>
+
+            <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-800 p-3.5">
+              <label className="block text-sm text-gray-800 dark:text-gray-100 mb-2">
+                Gostaria de indicar alguma empresa para a Geoteste?
+                <span className="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-500 align-middle">opcional</span>
+              </label>
+              <textarea
+                value={indicacaoEmpresas}
+                onChange={(e) => setIndicacaoEmpresas(e.target.value)}
+                rows={2}
+                placeholder="Nome da empresa e um contato, se puder"
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3.5 py-2.5 text-gray-900 dark:text-gray-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
+              />
             </div>
           </section>
 

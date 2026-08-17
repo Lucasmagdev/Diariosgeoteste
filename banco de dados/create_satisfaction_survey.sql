@@ -72,6 +72,10 @@ create table if not exists public.satisfaction_survey_responses (
   created_at timestamp with time zone not null default now()
 );
 
+-- mesmo motivo do "token" acima: "create table if not exists" nao adiciona
+-- coluna em tabela que ja existe.
+alter table public.satisfaction_survey_responses add column if not exists indicacao_empresas text;
+
 create index if not exists idx_satisfaction_survey_responses_obra_id on public.satisfaction_survey_responses(obra_id);
 
 alter table public.satisfaction_survey_responses enable row level security;
@@ -212,7 +216,7 @@ declare
   v_nps integer := nullif(p_payload->>'nps', '')::integer;
   v_required_keys text[] := array[
     'comercial_atendimento', 'comercial_agilidade', 'comercial_clareza',
-    'operacional_organizacao_campo', 'operacional_qualidade_execucao', 'operacional_prazos_operacao',
+    'operacional_organizacao_campo', 'operacional_qualidade_execucao', 'operacional_prazos_operacao', 'operacional_atendimento_medicao',
     'documentacao_prazo_entrega', 'documentacao_clareza_relatorios', 'documentacao_atendimento'
   ];
   v_key text;
@@ -268,7 +272,7 @@ begin
 
   insert into public.satisfaction_survey_responses (
     link_id, obra_id, empresa, obra_nome, data_referencia,
-    ratings, avaliacao_geral, nps,
+    ratings, avaliacao_geral, nps, indicacao_empresas,
     comentario_agradou, comentario_melhorar, comentario_observacao
   ) values (
     v_link.id, v_link.obra_id,
@@ -276,6 +280,7 @@ begin
     nullif(trim(coalesce(p_payload->>'obra_nome', '')), ''),
     nullif(p_payload->>'data_referencia', '')::date,
     v_ratings, v_avaliacao_geral, v_nps,
+    nullif(trim(coalesce(p_payload->>'indicacao_empresas', '')), ''),
     nullif(trim(coalesce(p_payload->>'comentario_agradou', '')), ''),
     nullif(trim(coalesce(p_payload->>'comentario_melhorar', '')), ''),
     nullif(trim(coalesce(p_payload->>'comentario_observacao', '')), '')

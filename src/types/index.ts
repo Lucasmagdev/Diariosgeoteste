@@ -207,10 +207,10 @@ export interface SatisfactionSurveyRatings {
   comercial_atendimento: number;
   comercial_agilidade: number;
   comercial_clareza: number;
-  operacional_prazos: number;
   operacional_organizacao_campo: number;
   operacional_qualidade_execucao: number;
-  operacional_organizacao_operacao: number;
+  operacional_prazos_operacao: number;
+  operacional_atendimento_medicao: number;
   documentacao_prazo_entrega: number;
   documentacao_clareza_relatorios: number;
   documentacao_atendimento: number;
@@ -226,6 +226,7 @@ export interface SatisfactionSurveyResponse {
   ratings: SatisfactionSurveyRatings;
   avaliacaoGeral: number;
   nps: number;
+  indicacaoEmpresas?: string | null;
   comentarioAgradou?: string | null;
   comentarioMelhorar?: string | null;
   comentarioObservacao?: string | null;

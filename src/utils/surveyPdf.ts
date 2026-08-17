@@ -18,6 +18,7 @@ export interface SurveyPdfData {
   ratings: { label: string; value: number }[];
   avaliacaoGeral: number;
   nps: number;
+  indicacaoEmpresas?: string | null;
   comentarioAgradou?: string | null;
   comentarioMelhorar?: string | null;
   comentarioObservacao?: string | null;
@@ -65,7 +66,7 @@ async function loadImage(url?: string | null) {
 }
 
 async function buildSurveyDoc(data: SurveyPdfData): Promise<jsPDF> {
-  const { obraName, empresa, dataReferencia, createdAt, ratings, avaliacaoGeral, nps, comentarioAgradou, comentarioMelhorar, comentarioObservacao } = data;
+  const { obraName, empresa, dataReferencia, createdAt, ratings, avaliacaoGeral, nps, indicacaoEmpresas, comentarioAgradou, comentarioMelhorar, comentarioObservacao } = data;
   const logo = await loadImage('/logogeoteste.png');
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
@@ -236,6 +237,7 @@ async function buildSurveyDoc(data: SurveyPdfData): Promise<jsPDF> {
     y += h;
   };
 
+  comment('Empresas indicadas', indicacaoEmpresas);
   comment('O que mais agradou', comentarioAgradou);
   comment('Pontos de melhoria', comentarioMelhorar);
   comment('Elogios, sugestões ou observações', comentarioObservacao);
