@@ -27,6 +27,7 @@ const INTRO_KEY = 'geoteste-admin-intro-seen';
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [editDiaryId, setEditDiaryId] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const isPWA = useIsPWA();
   const signatureToken = useMemo(
@@ -129,9 +130,19 @@ const AppContent: React.FC = () => {
       case 'dashboard':
         return <Dashboard onPageChange={setCurrentPage} />;
       case 'diaries':
-        return <DiariesList onNewDiary={() => setCurrentPage('new-diary')} />;
+        return (
+          <DiariesList
+            onNewDiary={() => setCurrentPage('new-diary')}
+            onEditDiary={(diaryId) => { setEditDiaryId(diaryId); setCurrentPage('new-diary'); }}
+          />
+        );
       case 'new-diary':
-        return <NewDiary onBack={() => setCurrentPage('diaries')} />;
+        return (
+          <NewDiary
+            editDiaryId={editDiaryId}
+            onBack={() => { setEditDiaryId(null); setCurrentPage('diaries'); }}
+          />
+        );
       case 'clients':
         return user.role === 'admin' ? <ClientsManagement /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'users':

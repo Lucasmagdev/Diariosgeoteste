@@ -13,6 +13,7 @@ import { formatTime24hOrEmpty, maskTimeInput, normalizeTimeInput } from '../util
 
 interface NewDiaryProps {
   onBack: () => void;
+  editDiaryId?: string | null;
 }
 
 interface TeamMember {
@@ -41,6 +42,15 @@ const toDecimalOrNull = (value: string | null | undefined): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+// Inverso do toDecimalOrNull: numero salvo no banco -> string em formato BR
+// pra reabrir um diario existente com o mesmo texto que o campo mostraria.
+const numToBRString = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return '';
+  return String(value).replace('.', ',');
+};
+
+const strOrEmpty = (value: string | null | undefined): string => value ?? '';
+
 const normalizeClientsList = (rows: any[] = []): Client[] => {
   return rows.map((row: any, index: number) => {
     const rawName = typeof row?.name === 'string' ? row.name.trim() : '';
@@ -57,8 +67,11 @@ const normalizeClientsList = (rows: any[] = []): Client[] => {
   });
 };
 
-export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
+export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
   const { user } = useAuth();
+  const isEditMode = Boolean(editDiaryId);
+  const [loadingEdit, setLoadingEdit] = useState(isEditMode);
+  const [editLoadError, setEditLoadError] = useState('');
   const [formData, setFormData] = useState({
     type: 'PCE',
     clientName: '',
@@ -265,6 +278,203 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
     loadUserData();
   }, [user]);
 
+  // Modo edição: carrega o diário existente e pré-preenche todo o formulário.
+  useEffect(() => {
+    if (!editDiaryId || !isSupabaseConfigured) {
+      setLoadingEdit(false);
+      return;
+    }
+
+    const loadDiaryForEdit = async () => {
+      setLoadingEdit(true);
+      setEditLoadError('');
+      try {
+        const { data: diary, error: diaryError } = await supabase
+          .from('work_diaries')
+          .select('*')
+          .eq('id', editDiaryId)
+          .single();
+        if (diaryError || !diary) throw diaryError || new Error('Diário não encontrado.');
+
+        setFormData({
+          type: diary.diary_type || 'PCE',
+          clientName: diary.client_name || '',
+          team: diary.team || '',
+          date: diary.date || '',
+          startTime: diary.start_time || '',
+          endTime: diary.end_time || '',
+          servicesExecuted: diary.services_executed || '',
+          geotestSignatureImage: diary.geotest_signature_url || '',
+          observations: diary.observations || '',
+        });
+        setWeather({
+          ensolarado: Boolean(diary.weather_ensolarado),
+          chuvaFraca: Boolean(diary.weather_chuva_fraca),
+          chuvaForte: Boolean(diary.weather_chuva_forte),
+        });
+        setShowTypeSelector(false);
+        setHasSelectedType(true);
+
+        const endereco = diary.endereco_detalhado;
+        if (endereco?.estado_id) {
+          setEnderecoDetalhado({
+            estadoId: endereco.estado_id || 0,
+            cidadeId: endereco.cidade_id || 0,
+            cidadeNomeLivre: endereco.cidade_id ? '' : (endereco.cidade_nome || ''),
+            rua: endereco.rua || '',
+            numero: endereco.numero || '',
+          });
+          if (endereco.estado_id) setCidades(getCidadesByEstado(endereco.estado_id));
+        }
+
+        // Carrega os dados especificos do tipo (cabecalho + estacas)
+        if (diary.diary_type === 'PCE') {
+          const { data: pce } = await supabase.from('work_diaries_pce').select('*').eq('diary_id', editDiaryId).maybeSingle();
+          if (pce) {
+            const { data: piles } = await supabase.from('work_diaries_pce_piles').select('*').eq('pce_id', pce.id).order('ordem', { ascending: true });
+            setPceData({
+              ensaioTipo: pce.ensaio_tipo || 'PCE CONVENCIONAL',
+              carregamentoTipos: pce.carregamento_tipos || [],
+              equipamentos: {
+                macaco: strOrEmpty(pce.equipamentos_macaco),
+                celula: strOrEmpty(pce.equipamentos_celula),
+                manometro: strOrEmpty(pce.equipamentos_manometro),
+                relogios: strOrEmpty(pce.equipamentos_relogios),
+                conjuntoVigas: strOrEmpty(pce.equipamentos_conjunto_vigas),
+              },
+              ocorrencias: strOrEmpty(pce.ocorrencias),
+              cravacao: { equipamento: strOrEmpty(pce.cravacao_equipamento), horimetro: strOrEmpty(pce.cravacao_horimetro) },
+              abastecimento: {
+                mobilizacao: { litrosTanque: strOrEmpty(pce.abastecimento_mobilizacao_litros_tanque), litrosGalao: strOrEmpty(pce.abastecimento_mobilizacao_litros_galao) },
+                finalDia: { litrosTanque: strOrEmpty(pce.abastecimento_finaldia_litros_tanque), litrosGalao: strOrEmpty(pce.abastecimento_finaldia_litros_galao) },
+                chegouDiesel: pce.abastecimento_chegou_diesel === null ? '' : (pce.abastecimento_chegou_diesel ? 'Sim' : 'Não'),
+                fornecidoPor: strOrEmpty(pce.abastecimento_fornecido_por),
+                quantidadeLitros: strOrEmpty(pce.abastecimento_quantidade_litros),
+                horarioChegada: strOrEmpty(pce.abastecimento_horario_chegada),
+              },
+              piles: (piles && piles.length > 0) ? piles.map((p: any) => ({
+                estacaNome: strOrEmpty(p.estaca_nome),
+                estacaProfundidadeM: numToBRString(p.estaca_profundidade_m),
+                estacaTipo: strOrEmpty(p.estaca_tipo),
+                estacaCargaTrabalhoTf: numToBRString(p.estaca_carga_trabalho_tf),
+                estacaCargaEnsaioTf: numToBRString(p.estaca_carga_ensaio_tf),
+                estacaDiametroCm: numToBRString(p.estaca_diametro_cm),
+                confirmado: true,
+                isExpanded: false,
+              })) : [{ estacaNome: '', estacaProfundidadeM: '', estacaTipo: '', estacaCargaTrabalhoTf: '', estacaCargaEnsaioTf: '', estacaDiametroCm: '', confirmado: false, isExpanded: true }],
+            });
+          }
+        } else if (diary.diary_type === 'PIT') {
+          const { data: pit } = await supabase.from('work_diaries_pit').select('*').eq('diary_id', editDiaryId).maybeSingle();
+          if (pit) {
+            const { data: piles } = await supabase.from('work_diaries_pit_piles').select('*').eq('pit_id', pit.id).order('ordem', { ascending: true });
+            setPitData({
+              equipamento: strOrEmpty(pit.equipamento) as PITFormData['equipamento'],
+              ocorrencias: strOrEmpty(pit.ocorrencias),
+              totalEstacas: pit.total_estacas === null || pit.total_estacas === undefined ? '' : String(pit.total_estacas),
+              piles: (piles && piles.length > 0) ? piles.map((p: any) => ({
+                estacaNome: strOrEmpty(p.estaca_nome),
+                estacaTipo: strOrEmpty(p.estaca_tipo),
+                diametroCm: numToBRString(p.diametro_cm),
+                profundidadeM: numToBRString(p.profundidade_m),
+                arrasamentoM: numToBRString(p.arrasamento_m),
+                comprimentoUtilM: numToBRString(p.comprimento_util_m),
+                confirmado: true,
+                isExpanded: false,
+              })) : [{ estacaNome: '', estacaTipo: '', diametroCm: '', profundidadeM: '', arrasamentoM: '', comprimentoUtilM: '', confirmado: false, isExpanded: true }],
+            });
+          }
+        } else if (diary.diary_type === 'PLACA') {
+          const { data: placa } = await supabase.from('work_diaries_placa').select('*').eq('diary_id', editDiaryId).maybeSingle();
+          if (placa) {
+            const { data: points } = await supabase.from('work_diaries_placa_piles').select('*').eq('placa_id', placa.id).order('ordem', { ascending: true });
+            setPlacaData({
+              equipamentos: {
+                macaco: strOrEmpty(placa.equipamentos_macaco),
+                celulaDeRCarga: strOrEmpty(placa.equipamentos_celula_carga),
+                manometro: strOrEmpty(placa.equipamentos_manometro),
+                placaDimensoes: strOrEmpty(placa.equipamentos_placa_dimensoes),
+                equipamentoReacao: strOrEmpty(placa.equipamentos_equipamento_reacao),
+                relogios: strOrEmpty(placa.equipamentos_relogios),
+              },
+              ocorrencias: strOrEmpty(placa.ocorrencias),
+              testPoints: (points && points.length > 0) ? points.map((p: any) => ({
+                nome: strOrEmpty(p.nome),
+                cargaTrabalho1KgfCm2: strOrEmpty(p.carga_trabalho_1_kgf_cm2),
+                cargaTrabalho2KgfCm2: strOrEmpty(p.carga_trabalho_2_kgf_cm2),
+              })) : [{ nome: '', cargaTrabalho1KgfCm2: '', cargaTrabalho2KgfCm2: '' }],
+            });
+          }
+        } else if (diary.diary_type === 'PDA') {
+          const { data: pda } = await supabase.from('fichapda').select('*').eq('diary_id', editDiaryId).maybeSingle();
+          if (pda) {
+            const arrToStr = (arr: number[] | null) => (arr || []).map((v) => numToBRString(v));
+            setPdaData({
+              computadorSelecionados: pda.computador || [],
+              equipamentoSelecionados: pda.equipamento || [],
+              blocoNome: strOrEmpty(pda.bloco_nome),
+              estacaNome: strOrEmpty(pda.estaca_nome),
+              estacaTipo: strOrEmpty(pda.estaca_tipo),
+              diametroCm: numToBRString(pda.diametro_cm),
+              cargaTrabalhoTf: numToBRString(pda.carga_trabalho_tf),
+              cargaEnsaioTf: numToBRString(pda.carga_ensaio_tf),
+              pesoMarteloKg: numToBRString(pda.peso_martelo_kg),
+              hq: arrToStr(pda.hq),
+              nega: arrToStr(pda.nega),
+              emx: arrToStr(pda.emx),
+              rmx: arrToStr(pda.rmx),
+              dmx: arrToStr(pda.dmx),
+              secaoCravada: arrToStr(pda.secao_cravada),
+              alturaBlocoM: numToBRString(pda.altura_bloco_m),
+              alturaSensoresM: numToBRString(pda.altura_sensores_m),
+              lpComprimentoUtilM: numToBRString(pda.lp_m),
+              leComprimentoAteSensoresM: numToBRString(pda.le_m),
+              ltComprimentoTotalM: numToBRString(pda.lt_m),
+            });
+          }
+        } else if (diary.diary_type === 'PDA_DIARIO') {
+          const { data: diario } = await supabase.from('work_diaries_pda_diario').select('*').eq('diary_id', editDiaryId).maybeSingle();
+          if (diario) {
+            const { data: piles } = await supabase.from('work_diaries_pda_diario_piles').select('*').eq('pda_diario_id', diario.id).order('ordem', { ascending: true });
+            setPdaDiaryData({
+              pdaComputadores: diario.pda_computadores || [],
+              ocorrencias: strOrEmpty(diario.ocorrencias),
+              abastecimento: {
+                equipamentos: diario.abastec_equipamentos || [],
+                horimetroHoras: numToBRString(diario.horimetro_horas),
+                mobilizacao: { litrosTanque: numToBRString(diario.mobilizacao_litros_tanque), litrosGalao: numToBRString(diario.mobilizacao_litros_galao) },
+                finalDia: { litrosTanque: numToBRString(diario.finaldia_litros_tanque), litrosGalao: numToBRString(diario.finaldia_litros_galao) },
+                entrega: {
+                  chegouDiesel: diario.entrega_chegou_diesel === null ? '' : (diario.entrega_chegou_diesel ? 'Sim' : 'Não'),
+                  fornecidoPor: strOrEmpty(diario.entrega_fornecido_por),
+                  quantidadeLitros: numToBRString(diario.entrega_quantidade_litros),
+                  horarioChegada: strOrEmpty(diario.entrega_horario_chegada),
+                },
+              },
+              piles: (piles && piles.length > 0) ? piles.map((p: any) => ({
+                nome: strOrEmpty(p.nome),
+                tipo: strOrEmpty(p.tipo),
+                diametroCm: numToBRString(p.diametro_cm),
+                profundidadeM: numToBRString(p.profundidade_m),
+                cargaTrabalhoTf: numToBRString(p.carga_trabalho_tf),
+                cargaEnsaioTf: numToBRString(p.carga_ensaio_tf),
+                confirmado: true,
+                isExpanded: false,
+              })) : [{ nome: '', tipo: '', diametroCm: '', profundidadeM: '', cargaTrabalhoTf: '', cargaEnsaioTf: '', confirmado: false, isExpanded: true }],
+            });
+          }
+        }
+      } catch (err: any) {
+        console.error('Erro ao carregar diário para edição:', err);
+        setEditLoadError('Não foi possível carregar este diário para edição.');
+      } finally {
+        setLoadingEdit(false);
+      }
+    };
+
+    loadDiaryForEdit();
+  }, [editDiaryId]);
+
   const handleTeamMemberToggle = (memberId: string) => {
     setSelectedTeamMembers(prev => {
       if (prev.includes(memberId)) {
@@ -377,21 +587,46 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
       payload.weather_chuva_fraca = weather.chuvaFraca;
       payload.weather_chuva_forte = weather.chuvaForte;
 
-      // 1) Cria o diário base e obtém o id
-      const { data: diaryRows, error: insertError } = await supabase
-        .from('work_diaries')
-        .insert(payload)
-        .select('id')
-        .single();
-      if (insertError) {
-        setError('Não foi possível salvar o diário. Tente novamente.');
-        setIsSubmitting(false);
-        return;
+      // 1) Cria (ou atualiza, em modo edição) o diário base e obtém o id
+      let diaryId: string | undefined;
+      if (isEditMode && editDiaryId) {
+        const { error: updateError } = await supabase
+          .from('work_diaries')
+          .update(payload)
+          .eq('id', editDiaryId);
+        if (updateError) {
+          setError('Não foi possível atualizar o diário. Tente novamente.');
+          setIsSubmitting(false);
+          return;
+        }
+        diaryId = editDiaryId;
+      } else {
+        const { data: diaryRows, error: insertError } = await supabase
+          .from('work_diaries')
+          .insert(payload)
+          .select('id')
+          .single();
+        if (insertError) {
+          setError('Não foi possível salvar o diário. Tente novamente.');
+          setIsSubmitting(false);
+          return;
+        }
+        diaryId = diaryRows?.id;
       }
 
-      const diaryId = diaryRows?.id;
+      // Em modo edição, o registro-detalhe (work_diaries_pce/pit/placa/...) já
+      // existe: atualiza em vez de inserir. As estacas/pontos não têm diff
+      // linha-a-linha — apaga tudo do pai e recria com o conjunto atual,
+      // mais simples e sem risco de sobrar lixo de uma edição anterior.
+      const upsertDetailRow = (table: string, rowPayload: any) =>
+        isEditMode
+          ? supabase.from(table).update(rowPayload).eq('diary_id', diaryId).select('id').single()
+          : supabase.from(table).insert(rowPayload).select('id').single();
 
-      // 2) Se for PCE, cria registro PCE e, em seguida, as estacas (piles)
+      const clearPilesIfEditing = (table: string, fkColumn: string, parentId: string) =>
+        isEditMode ? supabase.from(table).delete().eq(fkColumn, parentId) : Promise.resolve({ error: null });
+
+      // 2) Se for PCE, cria (ou atualiza) registro PCE e, em seguida, as estacas (piles)
       if (formData.type === 'PCE' && diaryId) {
         const pcePayload: any = {
           diary_id: diaryId,
@@ -415,11 +650,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
           abastecimento_horario_chegada: pceData.abastecimento.horarioChegada || null,
         };
 
-        const { data: pceRow, error: pceError } = await supabase
-          .from('work_diaries_pce')
-          .insert(pcePayload)
-          .select('id')
-          .single();
+        const { data: pceRow, error: pceError } = await upsertDetailRow('work_diaries_pce', pcePayload);
         if (pceError) {
           setError('Erro ao salvar dados do PCE. Tente novamente.');
           setIsSubmitting(false);
@@ -427,6 +658,15 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         }
 
         const pceId = (pceRow as any)?.id;
+
+        if (pceId) {
+          const { error: clearErr } = await clearPilesIfEditing('work_diaries_pce_piles', 'pce_id', pceId);
+          if (clearErr) {
+            setError('Erro ao atualizar estacas. Tente novamente.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
 
         if (pceId && pceData.piles && pceData.piles.length > 0) {
           const pilesPayload = pceData.piles.map((pile, idx) => ({
@@ -460,11 +700,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
           total_estacas: pitData.totalEstacas ? Number(pitData.totalEstacas) : null,
         };
 
-        const { data: pitRow, error: pitError } = await supabase
-          .from('work_diaries_pit')
-          .insert(pitPayload)
-          .select('id')
-          .single();
+        const { data: pitRow, error: pitError } = await upsertDetailRow('work_diaries_pit', pitPayload);
         if (pitError) {
           setError('Erro ao salvar dados do PIT. Tente novamente.');
           setIsSubmitting(false);
@@ -472,6 +708,14 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         }
 
         const pitId = (pitRow as any)?.id;
+        if (pitId) {
+          const { error: clearErr } = await clearPilesIfEditing('work_diaries_pit_piles', 'pit_id', pitId);
+          if (clearErr) {
+            setError('Erro ao atualizar estacas do PIT. Tente novamente.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
         if (pitId && pitData.piles && pitData.piles.length > 0) {
           const piles = pitData.piles.map((pile, idx) => ({
             pit_id: pitId,
@@ -508,11 +752,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
           ocorrencias: placaData.ocorrencias || null,
         };
 
-        const { data: placaRow, error: placaError } = await supabase
-          .from('work_diaries_placa')
-          .insert(placaPayload)
-          .select('id')
-          .single();
+        const { data: placaRow, error: placaError } = await upsertDetailRow('work_diaries_placa', placaPayload);
         if (placaError) {
           setError('Erro ao salvar dados da Placa. Tente novamente.');
           setIsSubmitting(false);
@@ -520,6 +760,14 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         }
 
         const placaId = (placaRow as any)?.id;
+        if (placaId) {
+          const { error: clearErr } = await clearPilesIfEditing('work_diaries_placa_piles', 'placa_id', placaId);
+          if (clearErr) {
+            setError('Erro ao atualizar pontos de ensaio. Tente novamente.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
         if (placaId && placaData.testPoints && placaData.testPoints.length > 0) {
           const testPoints = placaData.testPoints.map((point, idx) => ({
             placa_id: placaId,
@@ -572,9 +820,10 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
           lt_m: pdaData.ltComprimentoTotalM ? Number(pdaData.ltComprimentoTotalM.replace(',', '.')) : null,
         };
 
-        const { error: pdaError } = await supabase
-          .from('fichapda')
-          .insert(pdaPayload);
+        const pdaQuery = isEditMode
+          ? supabase.from('fichapda').update(pdaPayload).eq('diary_id', diaryId)
+          : supabase.from('fichapda').insert(pdaPayload);
+        const { error: pdaError } = await pdaQuery;
         if (pdaError) {
           setError('Erro ao salvar dados do PDA. Tente novamente.');
           setIsSubmitting(false);
@@ -606,11 +855,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
           entrega_horario_chegada: pdaDiaryData.abastecimento.entrega.horarioChegada || null,
         };
 
-        const { data: diarioRow, error: diarioError } = await supabase
-          .from('work_diaries_pda_diario')
-          .insert(diarioPayload)
-          .select('id')
-          .single();
+        const { data: diarioRow, error: diarioError } = await upsertDetailRow('work_diaries_pda_diario', diarioPayload);
         if (diarioError) {
           setError('Erro ao salvar diário PDA. Tente novamente.');
           setIsSubmitting(false);
@@ -618,6 +863,14 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         }
 
         const diarioId = (diarioRow as any)?.id;
+        if (diarioId) {
+          const { error: clearErr } = await clearPilesIfEditing('work_diaries_pda_diario_piles', 'pda_diario_id', diarioId);
+          if (clearErr) {
+            setError('Erro ao atualizar estacas do PDA. Tente novamente.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
         if (diarioId && pdaDiaryData.piles && pdaDiaryData.piles.length > 0) {
           const dataRows = (pdaDiaryData.piles || []).filter((p: any) =>
             p && (p.confirmado === true || Object.values(p).some((v: any) => typeof v === 'string' ? v.trim() !== '' : false))
@@ -644,7 +897,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         }
       }
 
-      setSuccess('Registro salvo com sucesso.');
+      setSuccess(isEditMode ? 'Diário atualizado com sucesso.' : 'Registro salvo com sucesso.');
       setIsSubmitting(false);
       onBack();
     } catch (err: any) {
@@ -829,6 +1082,28 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
     return items;
   };
 
+  if (loadingEdit) {
+    return (
+      <div className="max-w-4xl mx-auto px-3 sm:px-0 flex flex-col items-center justify-center py-24 text-gray-500">
+        <Loader2 className="w-8 h-8 animate-spin mb-3" />
+        <p>Carregando diário para edição...</p>
+      </div>
+    );
+  }
+
+  if (editLoadError) {
+    return (
+      <div className="max-w-4xl mx-auto px-3 sm:px-0">
+        <button onClick={onBack} className="flex items-center text-green-600 hover:text-green-700 px-2 py-1 rounded-lg font-medium mb-4">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+        </button>
+        <div className="p-4 bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-700 dark:text-red-300">{editLoadError}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-0">
       <div className="mb-4 sm:mb-6 md:mb-8">
@@ -839,13 +1114,15 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
           <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
           <span className="text-sm sm:text-base">Voltar</span>
         </button>
-        
+
         <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
           <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-green-600 rounded-lg flex items-center justify-center shadow-sm">
             <FileText className="text-white w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">{formData.type === 'PDA' ? 'Nova Ficha Técnica de PDA' : 'Novo Diário de Obra'}</h1>
+            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+              {isEditMode ? 'Editar Diário de Obra' : (formData.type === 'PDA' ? 'Nova Ficha Técnica de PDA' : 'Novo Diário de Obra')}
+            </h1>
           </div>
         </div>
       </div>
@@ -1229,16 +1506,18 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
         <div className="md:hidden space-y-4 mb-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Fluxo do diário</p>
-            <button
-              type="button"
-              onClick={() => {
-                setShowTypeSelector(true);
-                setActiveQuickSheet(null);
-              }}
-              className="text-xs font-medium text-green-700 dark:text-green-300 underline"
-            >
-              Alterar tipo
-            </button>
+            {!isEditMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTypeSelector(true);
+                  setActiveQuickSheet(null);
+                }}
+                className="text-xs font-medium text-green-700 dark:text-green-300 underline"
+              >
+                Alterar tipo
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -1278,16 +1557,18 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
             <div className="hidden md:block space-y-6 sm:space-y-8">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Fluxo do diário</h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTypeSelector(true);
-                    setActiveQuickSheet(null);
-                  }}
-                  className="text-xs font-medium text-green-700 dark:text-green-300 underline"
-                >
-                  Alterar tipo
-                </button>
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTypeSelector(true);
+                      setActiveQuickSheet(null);
+                    }}
+                    className="text-xs font-medium text-green-700 dark:text-green-300 underline"
+                  >
+                    Alterar tipo
+                  </button>
+                )}
               </div>
               <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
           <div className="p-4 sm:p-5 md:p-6 border-b border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-900/20">
@@ -1344,8 +1625,9 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
                     <button
                       key={opt}
                       type="button"
+                      disabled={isEditMode}
                       onClick={() => handleChange('type', opt)}
-                      className={`${formData.type === opt ? 'bg-green-600 text-white' : 'bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700'} px-3 py-2 rounded-lg font-medium hover:scale-105 transition-all`}
+                      className={`${formData.type === opt ? 'bg-green-600 text-white' : 'bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700'} px-3 py-2 rounded-lg font-medium hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
                     >
                       {label}
                     </button>
@@ -1689,7 +1971,9 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack }) => {
             className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 hover:shadow-lg hover:scale-105 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center space-x-2"
           >
             <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="text-sm sm:text-base">{isSubmitting ? 'Salvando...' : 'Salvar Diário'}</span>
+            <span className="text-sm sm:text-base">
+              {isSubmitting ? 'Salvando...' : (isEditMode ? 'Salvar alterações' : 'Salvar Diário')}
+            </span>
           </button>
         </div>
       </form>

@@ -20,6 +20,7 @@ type DiaryRow = WorkDiary;
 
 interface DiariesListProps {
   onNewDiary: () => void;
+  onEditDiary: (diaryId: string) => void;
 }
 
 const DEFAULT_PUBLIC_APP_URL = 'https://geotesteapp.netlify.app';
@@ -78,7 +79,7 @@ const buildPublicSignatureLink = (token: string): string => {
   return url.toString();
 };
 
-export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
+export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary, onEditDiary }) => {
   const { user } = useAuth();
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -833,9 +834,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary }) => {
   };
 
   const handleEditDiary = (diary: DiaryRow) => {
-    toast.info('Funcionalidade de edição em desenvolvimento. Em breve você poderá editar os diários existentes.');
-    // TODO: Implementar navegação para página de edição
-    // ou abrir modal de edição
+    onEditDiary(diary.id);
   };
 
   useEffect(() => {
