@@ -69,7 +69,7 @@ const buildSurveyPublicLink = (surveyToken: string): string => {
   return url.toString();
 };
 
-const mapSurveyResponse = (r: any): SatisfactionSurveyResponse => ({
+export const mapSurveyResponse = (r: any): SatisfactionSurveyResponse => ({
   id: r.id, obraId: r.obra_id, linkId: r.link_id,
   empresa: r.empresa, obraNome: r.obra_nome, dataReferencia: r.data_referencia,
   ratings: r.ratings || {}, avaliacaoGeral: r.avaliacao_geral, nps: r.nps,
@@ -78,7 +78,7 @@ const mapSurveyResponse = (r: any): SatisfactionSurveyResponse => ({
   createdAt: r.created_at,
 });
 
-const SURVEY_RATING_LABELS: Record<string, string> = {
+export const SURVEY_RATING_LABELS: Record<string, string> = {
   comercial_atendimento: 'Atendimento da equipe comercial',
   comercial_agilidade: 'Agilidade no envio da proposta e retorno',
   comercial_clareza: 'Clareza das informações técnicas e comerciais',

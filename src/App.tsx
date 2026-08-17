@@ -19,6 +19,7 @@ import { PublicDiarySignature } from './components/PublicDiarySignature';
 import { PublicChecklistFill } from './components/PublicChecklistFill';
 import { PublicSurveyFill } from './components/PublicSurveyFill';
 import { PortalManagement } from './components/PortalManagement';
+import { SatisfactionSurveys } from './components/SatisfactionSurveys';
 import { ClientPortal } from './components/ClientPortal';
 import { IntroScreen } from './components/IntroScreen';
 
@@ -151,6 +152,8 @@ const AppContent: React.FC = () => {
         return user.role === 'admin' ? <EquipmentMap /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'portal':
         return user.role === 'admin' ? <PortalManagement /> : <Dashboard onPageChange={setCurrentPage} />;
+      case 'surveys':
+        return user.role === 'admin' ? <SatisfactionSurveys /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'profile':
         return <ProfilePage />;
       default:
