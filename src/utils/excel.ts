@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { formatTime24hOrEmpty } from './time';
+import { formatTime24hOrEmpty, formatDateOnlyBR } from './time';
 
 export type DiaryExcelRow = {
   Tipo?: string;
@@ -75,7 +75,7 @@ export function mapDiaryToExcelRow(d: {
     Cliente: d.clientName,
     Endereco: d.address,
     Equipe: d.team,
-    Data: new Date(d.date).toLocaleDateString('pt-BR'),
+    Data: formatDateOnlyBR(d.date),
     Inicio: formatTime24hOrEmpty(d.startTime),
     Termino: formatTime24hOrEmpty(d.endTime),
     'Serviços Executados': d.servicesExecuted,

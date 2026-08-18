@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Scissors, Loader2, FileText, Calendar, Bot } fr
 import { summarizeText, chatComplete } from '../utils/aiClient';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDateOnlyBR } from '../utils/time';
 
 type DiaryOption = {
   id: string;
@@ -155,7 +156,7 @@ export const AgentAssistant: React.FC = () => {
                       <option value="">Escolha um diário...</option>
                       {diaries.map((diary) => (
                         <option key={diary.id} value={diary.id}>
-                          {diary.clientName} - {new Date(diary.date).toLocaleDateString('pt-BR')}
+                          {diary.clientName} - {formatDateOnlyBR(diary.date)}
                         </option>
                       ))}
                     </select>

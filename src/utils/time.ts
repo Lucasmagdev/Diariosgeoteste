@@ -1,3 +1,20 @@
+// Datas puras (YYYY-MM-DD, ex: work_diaries.date) NAO tem hora/fuso — sao
+// so um calendario. new Date('2026-08-13') as le como meia-noite UTC, e
+// em fuso negativo (Brasil, UTC-3) isso vira 21h do dia 12 no horario
+// local, entao toLocaleDateString mostra um dia a menos do que foi
+// realmente gravado. Formata direto dos digitos, sem passar por Date().
+export const formatDateOnlyBR = (value?: string | null): string => {
+  if (!value) return '-';
+  const raw = String(value).trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  try {
+    return new Date(raw).toLocaleDateString('pt-BR');
+  } catch {
+    return raw;
+  }
+};
+
 export const formatTime24h = (value?: string | null): string => {
   if (!value) return '-';
 

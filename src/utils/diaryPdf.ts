@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { formatTime24h } from './time';
+import { formatTime24h, formatDateOnlyBR } from './time';
 
 /**
  * Gerador VETORIAL do PDF do Diário de Obra.
@@ -87,11 +87,7 @@ const formatCpf = (value?: string | null) => {
 
 const formatDateBR = (value?: string) => {
   if (!value) return '-';
-  try {
-    return new Date(value).toLocaleDateString('pt-BR');
-  } catch {
-    return value;
-  }
+  return formatDateOnlyBR(value);
 };
 
 // ---------------------------------------------------------------- principal

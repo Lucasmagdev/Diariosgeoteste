@@ -5,6 +5,7 @@ import {
   ClipboardList, ListChecks, Camera, Eye, GripVertical, Download, Star, Ban,
 } from 'lucide-react';
 import { Client, Obra, ObraDocument, ObraDocumentCategory, PortalCredential, ChecklistTemplate, ChecklistTemplateItem, ObraChecklist, ObraChecklistItem, SatisfactionSurveyResponse } from '../types';
+import { formatDateOnlyBR } from '../utils/time';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmDialog from './ConfirmDialog';
@@ -889,7 +890,7 @@ export const PortalManagement: React.FC = () => {
                             <div key={d.id} className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
                               <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                               <span className="font-medium">{d.diary_type}</span>
-                              <span className="text-gray-400">{d.date ? new Date(d.date).toLocaleDateString('pt-BR') : '-'}</span>
+                              <span className="text-gray-400">{d.date ? formatDateOnlyBR(d.date) : '-'}</span>
                               <span className="truncate text-gray-400">{d.services}</span>
                               {d.status === 'signed' && <StatusBadge variant="success">assinado</StatusBadge>}
                             </div>

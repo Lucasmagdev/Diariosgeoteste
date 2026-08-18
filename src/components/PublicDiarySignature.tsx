@@ -3,7 +3,7 @@ import { Calendar, Clock, FileCheck2, PenLine, ShieldCheck } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { SignaturePadFixed } from './SignaturePadFixed';
 import { DiaryPdfPreview } from './DiaryPdfPreview';
-import { formatTime24hOrEmpty } from '../utils/time';
+import { formatTime24hOrEmpty, formatDateOnlyBR } from '../utils/time';
 import { diaryPdfBlobUrl } from '../utils/diaryPdf';
 
 interface PublicDiarySignatureProps {
@@ -331,7 +331,7 @@ export const PublicDiarySignature: React.FC<PublicDiarySignatureProps> = ({ toke
               <Calendar className="h-4 w-4 text-emerald-100" />
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-emerald-100/70">Data</p>
-                <p className="text-sm font-medium">{diary?.date ? new Date(diary.date).toLocaleDateString('pt-BR') : '-'}</p>
+                <p className="text-sm font-medium">{diary?.date ? formatDateOnlyBR(diary.date) : '-'}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-emerald-950/20 px-5 py-3.5">

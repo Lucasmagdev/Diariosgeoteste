@@ -7,7 +7,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { SignaturePadFixed } from './SignaturePadFixed';
 import { DiaryPdfPreview } from './DiaryPdfPreview';
 import { diaryPdfBlobUrl } from '../utils/diaryPdf';
-import { formatTime24hOrEmpty } from '../utils/time';
+import { formatTime24hOrEmpty, formatDateOnlyBR } from '../utils/time';
 
 const TOKEN_KEY = 'portalToken';
 
@@ -494,7 +494,7 @@ export const ClientPortal: React.FC = () => {
                       <div key={d.id} className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
                         <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{d.diary_type || 'Diário'} · {d.date ? new Date(d.date).toLocaleDateString('pt-BR') : '-'}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{d.diary_type || 'Diário'} · {d.date ? formatDateOnlyBR(d.date) : '-'}</p>
                           <p className="text-xs text-gray-500 truncate">{d.services_executed || d.team || ''}</p>
                         </div>
                         {signed ? (

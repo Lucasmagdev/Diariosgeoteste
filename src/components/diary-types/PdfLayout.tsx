@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDateOnlyBR } from '../../utils/time';
 
 interface PdfLayoutProps {
   diary: any;
@@ -51,7 +52,7 @@ export const PdfLayout: React.FC<PdfLayoutProps> = ({ diary, title, children }) 
             </div>
             <div className="flex items-center gap-2 text-[6px] font-medium leading-tight flex-shrink-0">
               <span className="whitespace-nowrap">Cliente: {diary.clientName || '-'}</span>
-              <span className="whitespace-nowrap">Data: {diary.date ? new Date(diary.date).toLocaleDateString('pt-BR') : '-'}</span>
+              <span className="whitespace-nowrap">Data: {diary.date ? formatDateOnlyBR(diary.date) : '-'}</span>
             </div>
           </header>
 

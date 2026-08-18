@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Search, Calendar, Clock, User, MapPin, FileText, Eye, Edit, Trash2, Download, FileSpreadsheet, Link2 } from 'lucide-react';
 import { WorkDiary } from '../types';
+import { formatDateOnlyBR } from '../utils/time';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { generateDiaryPdf, diaryPdfBlobUrl } from '../utils/diaryPdf';
@@ -306,9 +307,7 @@ export const DiariesList: React.FC<DiariesListProps> = ({ onNewDiary, onEditDiar
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
+  const formatDate = (dateString: string) => formatDateOnlyBR(dateString);
 
   const detailsRef = useRef<HTMLDivElement | null>(null);
 

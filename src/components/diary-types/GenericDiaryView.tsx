@@ -2,13 +2,13 @@ import React from 'react';
 import { PdfClimateRow, PdfLayout, PdfRow, PdfSection, PdfValue } from './PdfLayout';
 import { GeotestSignatureValue } from './GeotestSignatureValue';
 import { ClientSignatureValue } from './ClientSignatureValue';
-import { formatTime24h } from '../../utils/time';
+import { formatTime24h, formatDateOnlyBR } from '../../utils/time';
 
 interface GenericDiaryViewProps {
   diary: any;
 }
 
-const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString('pt-BR') : '');
+const formatDate = (value?: string) => (value ? formatDateOnlyBR(value) : '');
 
 export const GenericDiaryView: React.FC<GenericDiaryViewProps> = ({ diary }) => {
   return (
