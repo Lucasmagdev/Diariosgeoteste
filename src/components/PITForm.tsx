@@ -30,7 +30,8 @@ export interface PITPile {
 }
 
 export interface PITFormData {
-  equipamento: 'PIT 1' | 'PIT 2' | 'PIT 3' | 'PIT 4' | 'PIT 5' | '';
+  equipamento: string;
+  equipamentoId: string;
   piles: PITPile[];
   ocorrencias: string;
   totalEstacas: string;
@@ -39,9 +40,10 @@ export interface PITFormData {
 interface PITFormProps {
   value: PITFormData;
   onChange: (next: PITFormData) => void;
+  equipamentosDisponiveis: { id: string; nome: string }[];
 }
 
-export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
+export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosDisponiveis }) => {
   const setField = (fn: (draft: PITFormData) => void) => {
     // ✅ OTIMIZAÇÃO: structuredClone() é nativo e muito mais rápido que JSON.parse(JSON.stringify())
     const next: PITFormData = structuredClone(value);
@@ -49,8 +51,8 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
     onChange(next);
   };
 
-  const setEquipamento = (equip: PITFormData['equipamento']) => {
-    setField((d) => { d.equipamento = equip; });
+  const setEquipamento = (equip: { id: string; nome: string }) => {
+    setField((d) => { d.equipamento = equip.nome; d.equipamentoId = equip.id; });
   };
 
   const addPile = () => {
@@ -130,18 +132,22 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange }) => {
         {/* Equipamento */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Equipamento</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-            {(['PIT 1','PIT 2','PIT 3','PIT 4','PIT 5'] as const).map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => setEquipamento(opt)}
-                className={`${value.equipamento === opt ? 'bg-green-600 text-white' : 'bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700'} px-3 py-2 rounded-lg font-medium hover:scale-105 transition-all`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
+          {equipamentosDisponiveis.length === 0 ? (
+            <p className="text-sm text-amber-600 dark:text-amber-400">Nenhum equipamento PIT cadastrado. Peça pro admin cadastrar em "Equipamentos".</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+              {equipamentosDisponiveis.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setEquipamento(opt)}
+                  className={`${value.equipamentoId === opt.id ? 'bg-green-600 text-white' : 'bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700'} px-3 py-2 rounded-lg font-medium hover:scale-105 transition-all`}
+                >
+                  {opt.nome}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {divider}

@@ -13,14 +13,15 @@
 select id, client_name, date, start_time, end_time,
        responsible_signed_by, responsible_signed_cpf, responsible_signed_at, signature_status
 from public.work_diaries
-where id::text ilike '7ca02ffe%'
-  and client_name = 'ALVES RIBEIRO'
-  and date = '2026-08-12';
+where id = '7ca02ffe-77f0-43b8-a050-a40975899b8c';
 
 -- =====================================================================
--- PASSO 2 — se a linha acima for exatamente essa (Vivian Damasceno,
--- 12/08/2026), rode o bloco abaixo. Ele so mexe se achar UMA linha so;
--- se achar 0 ou mais de 1, cancela sozinho sem tocar em nada.
+-- PASSO 2 — id completo confirmado via diagnostico
+-- (banco de dados/diagnostico_diario_7ca02ffe.sql): client_name
+-- "ALVES RIBEIRO", date real 2026-08-13 (o PDF mostra 12/08 por causa
+-- do mesmo bug de fuso ja corrigido em outro lugar do app), assinado
+-- por Vivian Damasceno. Usa o id completo agora, entao a trava de
+-- seguranca abaixo e so redundancia — mas fica.
 -- =====================================================================
 do $$
 declare
@@ -28,9 +29,7 @@ declare
 begin
   select count(*) into v_count
   from public.work_diaries
-  where id::text ilike '7ca02ffe%'
-    and client_name = 'ALVES RIBEIRO'
-    and date = '2026-08-12';
+  where id = '7ca02ffe-77f0-43b8-a050-a40975899b8c';
 
   if v_count <> 1 then
     raise exception 'Esperava achar exatamente 1 diario, achou %. Nada foi alterado.', v_count;
@@ -43,9 +42,7 @@ begin
       responsible_signed_by = null,
       responsible_signed_cpf = null,
       signature_status = 'pending'
-  where id::text ilike '7ca02ffe%'
-    and client_name = 'ALVES RIBEIRO'
-    and date = '2026-08-12';
+  where id = '7ca02ffe-77f0-43b8-a050-a40975899b8c';
 
   raise notice 'Diario reaberto para assinatura.';
 end $$;

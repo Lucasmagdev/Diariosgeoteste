@@ -116,6 +116,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
 
   const [pitData, setPitData] = useState<PITFormData>({
     equipamento: '',
+    equipamentoId: '',
     piles: [
       { estacaNome: '', estacaTipo: '', diametroCm: '', profundidadeM: '', arrasamentoM: '', comprimentoUtilM: '', confirmado: false, isExpanded: true }
     ],
@@ -189,6 +190,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<string[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
+  const [equipamentos, setEquipamentos] = useState<{ id: string; tipo: string; nome: string }[]>([]);
   const diaryTypeOptions = ['PCE', 'PLACA', 'PIT', 'PDA', 'PDA_DIARIO'] as const;
   type DiaryType = typeof diaryTypeOptions[number];
   const [activeQuickSheet, setActiveQuickSheet] = useState<
@@ -248,6 +250,16 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
 
         if (!clientsError && clientsData) {
           setClients(normalizeClientsList(clientsData as any[]));
+        }
+
+        // Buscar catalogo de equipamentos (ativos)
+        const { data: equipData, error: equipError } = await supabase
+          .from('equipamentos')
+          .select('id, tipo, nome')
+          .eq('ativo', true)
+          .order('nome');
+        if (!equipError && equipData) {
+          setEquipamentos(equipData as any[]);
         }
 
         // Buscar todos os usuários para formar a equipe
@@ -369,7 +381,8 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
           if (pit) {
             const { data: piles } = await supabase.from('work_diaries_pit_piles').select('*').eq('pit_id', pit.id).order('ordem', { ascending: true });
             setPitData({
-              equipamento: strOrEmpty(pit.equipamento) as PITFormData['equipamento'],
+              equipamento: strOrEmpty(pit.equipamento),
+              equipamentoId: strOrEmpty(pit.equipamento_id),
               ocorrencias: strOrEmpty(pit.ocorrencias),
               totalEstacas: pit.total_estacas === null || pit.total_estacas === undefined ? '' : String(pit.total_estacas),
               piles: (piles && piles.length > 0) ? piles.map((p: any) => ({
@@ -525,6 +538,33 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
         setError('Preencha todos os campos do endereço: Estado, Cidade, Rua e Número');
         setIsSubmitting(false);
         return;
+      }
+
+      // Um equipamento e uma peca fisica unica: nao pode estar em dois
+      // diarios no mesmo dia. Checa antes de criar qualquer registro,
+      // pra nao sobrar diario orfao se for bloqueado aqui.
+      if (formData.type === 'PIT' && pitData.equipamentoId) {
+        const otherDiaries = await supabase
+          .from('work_diaries')
+          .select('id, client_name')
+          .eq('date', formData.date)
+          .neq('id', isEditMode ? editDiaryId : '00000000-0000-0000-0000-000000000000');
+        const otherIds = (otherDiaries.data || []).map((d: any) => d.id);
+        if (otherIds.length > 0) {
+          const conflict = await supabase
+            .from('work_diaries_pit')
+            .select('diary_id')
+            .eq('equipamento_id', pitData.equipamentoId)
+            .in('diary_id', otherIds)
+            .limit(1)
+            .maybeSingle();
+          if (conflict.data) {
+            const conflictDiary = (otherDiaries.data || []).find((d: any) => d.id === conflict.data!.diary_id);
+            setError(`Equipamento "${pitData.equipamento}" já está em uso em outro diário no dia ${formData.date.split('-').reverse().join('/')} (${conflictDiary?.client_name || 'outra obra'}). Escolha outro equipamento.`);
+            setIsSubmitting(false);
+            return;
+          }
+        }
       }
 
       // Montar endereço completo a partir do endereço detalhado
@@ -696,6 +736,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
         const pitPayload: any = {
           diary_id: diaryId,
           equipamento: pitData.equipamento || null,
+          equipamento_id: pitData.equipamentoId || null,
           ocorrencias: pitData.ocorrencias || null,
           total_estacas: pitData.totalEstacas ? Number(pitData.totalEstacas) : null,
         };
@@ -1464,7 +1505,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
             )}
             {activeQuickSheet === 'pit' && (
               <div className="space-y-3">
-                <PITForm value={pitData} onChange={setPitData} />
+                <PITForm value={pitData} onChange={setPitData} equipamentosDisponiveis={equipamentos.filter(e => e.tipo === 'PIT')} />
               </div>
             )}
             {activeQuickSheet === 'placa' && (

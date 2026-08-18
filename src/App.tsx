@@ -14,7 +14,7 @@ import { DiaryHelp } from './components/DiaryHelp';
 import { SplashScreen } from './components/SplashScreen';
 import { InstallPWA } from './components/InstallPWA';
 import { useIsPWA } from './hooks/useIsPWA';
-import { EquipmentMap } from './components/EquipmentMap';
+import { EquipmentCatalog } from './components/EquipmentCatalog';
 import { PublicDiarySignature } from './components/PublicDiarySignature';
 import { PublicChecklistFill } from './components/PublicChecklistFill';
 import { PublicSurveyFill } from './components/PublicSurveyFill';
@@ -149,7 +149,7 @@ const AppContent: React.FC = () => {
       case 'users':
         return <UsersManagement />;
       case 'equipment':
-        return user.role === 'admin' ? <EquipmentMap /> : <Dashboard onPageChange={setCurrentPage} />;
+        return user.role === 'admin' ? <EquipmentCatalog /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'portal':
         return user.role === 'admin' ? <PortalManagement /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'surveys':

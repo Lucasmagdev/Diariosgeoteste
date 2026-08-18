@@ -22,19 +22,6 @@ export interface Client {
   createdAt: string;
 }
 
-export interface EquipmentLocation {
-  id: string;
-  name: string;
-  description?: string | null;
-  address: string;
-  latitude: number;
-  longitude: number;
-  clientId?: string | null;
-  clientName?: string | null;
-  status: string;
-  createdAt: string;
-}
-
 export interface WorkDiary {
   id: string;
   clientId: string;
@@ -78,38 +65,6 @@ export interface Collaborator {
   status: 'ativo' | 'inativo' | 'férias' | 'afastado';
   createdAt: string;
   updatedAt?: string;
-}
-
-export interface Team {
-  id: string;
-  name: string;
-  description?: string | null;
-  status: 'ativa' | 'inativa';
-  createdAt: string;
-  updatedAt?: string;
-  collaborators?: Collaborator[]; // Para quando carregar com relacionamentos
-}
-
-export interface TeamCollaborator {
-  id: string;
-  teamId: string;
-  collaboratorId: string;
-  roleInTeam?: string | null;
-  assignedAt: string;
-  collaborator?: Collaborator; // Para quando carregar com relacionamento
-}
-
-export interface TeamEquipmentAssignment {
-  id: string;
-  teamId: string;
-  equipmentId: string;
-  assignedAt: string;
-  assignedUntil?: string | null;
-  status: 'ativo' | 'finalizado';
-  createdAt: string;
-  updatedAt?: string;
-  team?: Team; // Para quando carregar com relacionamento
-  equipment?: EquipmentLocation; // Para quando carregar com relacionamento
 }
 
 export type ObraDocumentCategory =
