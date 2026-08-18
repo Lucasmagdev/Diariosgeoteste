@@ -1941,7 +1941,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
 
           {formData.type === 'PIT' && (
             <div className="mt-6">
-              <PITForm value={pitData} onChange={setPitData} />
+              <PITForm value={pitData} onChange={setPitData} equipamentosDisponiveis={equipamentos.filter(e => e.tipo === 'PIT')} />
             </div>
           )}
 
