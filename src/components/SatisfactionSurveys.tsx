@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Star, TrendingUp, Users, Eye, Download, Trash2, MessageSquare } from 'lucide-react';
+import { Star, TrendingUp, Users, Eye, Download, Trash2, MessageSquare, Link as LinkIcon } from 'lucide-react';
 import { SatisfactionSurveyResponse } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmDialog from './ConfirmDialog';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { FilterBar, Modal, PageHeader, StatusBadge, Surface, IconButton } from './ui';
-import { mapSurveyResponse, SURVEY_RATING_LABELS } from './PortalManagement';
+import { mapSurveyResponse, SURVEY_RATING_LABELS, buildSurveyPublicLink } from './PortalManagement';
 import { generateSurveyPdf } from '../utils/surveyPdf';
 
 interface ObraLite { id: string; name: string; clientId: string; }
@@ -49,6 +49,37 @@ export const SatisfactionSurveys: React.FC = () => {
   };
 
   useEffect(() => { fetchAll(); }, []);
+
+  const [quickNome, setQuickNome] = useState('');
+  const [quickLoading, setQuickLoading] = useState(false);
+
+  const gerarLinkRapido = async () => {
+    const nome = quickNome.trim();
+    if (!nome) { toast.error('Informe o nome da empresa.'); return; }
+    setQuickLoading(true);
+    try {
+      const { data: obra, error: obraError } = await supabase
+        .from('obras')
+        .insert({ name: nome, status: 'ativa' })
+        .select('id, name, client_id')
+        .single();
+      if (obraError) throw obraError;
+
+      const { data, error } = await supabase.rpc('create_satisfaction_survey_link', { p_obra_id: obra.id });
+      if (error) throw error;
+
+      const link = buildSurveyPublicLink(data.token);
+      await navigator.clipboard.writeText(link);
+      setObras(prev => [...prev, { id: obra.id, name: obra.name, clientId: obra.client_id }]);
+      setQuickNome('');
+      toast.success(`Link copiado para "${nome}". O cliente responde direto, sem precisar logar.`);
+    } catch (err) {
+      console.error('gerarLinkRapido', err);
+      toast.error('Falha ao gerar link rápido.');
+    } finally {
+      setQuickLoading(false);
+    }
+  };
 
   const obraById = (id: string) => obras.find(o => o.id === id);
   const clientNameForObra = (obraId: string) => {
@@ -122,6 +153,25 @@ export const SatisfactionSurveys: React.FC = () => {
         eyebrow="Gestão"
         description="NPS e avaliações recebidas de todos os clientes, num só lugar."
       />
+
+      <Surface className="p-4 sm:p-5 mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Link rápido</h3>
+        <p className="text-xs text-gray-500 mb-3">Digite só o nome da empresa e gera o link da pesquisa na hora — sem precisar cadastrar cliente nem obra antes.</p>
+        <form
+          onSubmit={(e) => { e.preventDefault(); gerarLinkRapido(); }}
+          className="flex flex-col sm:flex-row gap-3"
+        >
+          <input
+            value={quickNome}
+            onChange={(e) => setQuickNome(e.target.value)}
+            placeholder="Nome da empresa"
+            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-800 dark:text-gray-100"
+          />
+          <button type="submit" disabled={quickLoading} className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50">
+            <LinkIcon className="h-4 w-4" /> Gerar e copiar link
+          </button>
+        </form>
+      </Surface>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Surface className="p-4">

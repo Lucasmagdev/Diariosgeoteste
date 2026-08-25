@@ -58,7 +58,7 @@ const buildChecklistPublicLink = (checklistToken: string): string => {
   return url.toString();
 };
 
-const buildSurveyPublicLink = (surveyToken: string): string => {
+export const buildSurveyPublicLink = (surveyToken: string): string => {
   const configured = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim();
   let url: URL;
   try {
