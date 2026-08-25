@@ -188,7 +188,7 @@ begin
       'client_name', cl.name
     )
     from public.obras o
-    join public.clients cl on cl.id = o.client_id
+    left join public.clients cl on cl.id = o.client_id
     where o.id = v_link.obra_id
   );
 end;
