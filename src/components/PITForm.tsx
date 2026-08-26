@@ -1,5 +1,5 @@
-import React from 'react';
-import { Edit, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit, Check, Layers, Trash2, X, CheckSquare, Square } from 'lucide-react';
 
 const parseBR = (value: string): number | null => {
   const t = (value || '').trim().replace(',', '.');
@@ -16,6 +16,23 @@ const calcComprimentoUtilM = (profundidadeM: string, arrasamentoM: string): stri
   const a = parseBR(arrasamentoM);
   if (p === null || a === null) return '';
   return formatBR(p - a);
+};
+
+// Gera nomes sequenciais pra estaca em massa. Se o nome inicial termina em
+// numero ("E-01"), incrementa preservando os zeros a esquerda (E-02, E-03...).
+// Sem numero no final, so acrescenta "-2", "-3" etc.
+const generateBulkNomes = (base: string, qty: number): string[] => {
+  const trimmed = (base || '').trim() || 'E';
+  const m = trimmed.match(/^(.*?)(\d+)$/);
+  if (m) {
+    const prefix = m[1];
+    const numStr = m[2];
+    const start = parseInt(numStr, 10);
+    const width = numStr.length;
+    return Array.from({ length: qty }, (_, i) => `${prefix}${String(start + i).padStart(width, '0')}`);
+  }
+  if (qty === 1) return [trimmed];
+  return Array.from({ length: qty }, (_, i) => (i === 0 ? trimmed : `${trimmed}-${i + 1}`));
 };
 
 export interface PITPile {
@@ -44,6 +61,17 @@ interface PITFormProps {
 }
 
 export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosDisponiveis }) => {
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkQtd, setBulkQtd] = useState('5');
+  const [bulkNomeInicial, setBulkNomeInicial] = useState('E-01');
+  const [bulkTipo, setBulkTipo] = useState('');
+  const [bulkDiametro, setBulkDiametro] = useState('');
+  const [bulkProfundidade, setBulkProfundidade] = useState('');
+  const [bulkArrasamento, setBulkArrasamento] = useState('');
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
   const setField = (fn: (draft: PITFormData) => void) => {
     // ✅ OTIMIZAÇÃO: structuredClone() é nativo e muito mais rápido que JSON.parse(JSON.stringify())
     const next: PITFormData = structuredClone(value);
@@ -70,20 +98,41 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
     });
   };
 
+  const addBulkPiles = () => {
+    const qty = Math.max(1, Math.min(200, parseInt(bulkQtd, 10) || 0));
+    if (!qty) return;
+    const nomes = generateBulkNomes(bulkNomeInicial, qty);
+    const comprimentoUtilM = calcComprimentoUtilM(bulkProfundidade, bulkArrasamento);
+    setField((d) => {
+      const novas: PITPile[] = nomes.map((nome) => ({
+        estacaNome: nome,
+        estacaTipo: bulkTipo,
+        diametroCm: bulkDiametro,
+        profundidadeM: bulkProfundidade,
+        arrasamentoM: bulkArrasamento,
+        comprimentoUtilM,
+        confirmado: true,
+        isExpanded: false
+      }));
+      d.piles = [...novas, ...d.piles];
+    });
+    setBulkOpen(false);
+  };
+
   const confirmPile = (index: number) => {
     setField((d) => {
       const pile = d.piles[index];
-      const hasData = pile.estacaNome.trim() || 
-                     pile.estacaTipo.trim() || 
-                     pile.diametroCm.trim() || 
-                     pile.profundidadeM.trim() || 
-                     pile.arrasamentoM.trim() || 
+      const hasData = pile.estacaNome.trim() ||
+                     pile.estacaTipo.trim() ||
+                     pile.diametroCm.trim() ||
+                     pile.profundidadeM.trim() ||
+                     pile.arrasamentoM.trim() ||
                      pile.comprimentoUtilM.trim();
-      
+
       if (hasData) {
         pile.confirmado = true;
         pile.isExpanded = false;
-        
+
         // Move estaca confirmada para o final
         const confirmedPile = d.piles.splice(index, 1)[0];
         d.piles.push(confirmedPile);
@@ -98,11 +147,11 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
   };
 
   const isPileEmpty = (pile: PITPile) => {
-    return !pile.estacaNome.trim() && 
-           !pile.estacaTipo.trim() && 
-           !pile.diametroCm.trim() && 
-           !pile.profundidadeM.trim() && 
-           !pile.arrasamentoM.trim() && 
+    return !pile.estacaNome.trim() &&
+           !pile.estacaTipo.trim() &&
+           !pile.diametroCm.trim() &&
+           !pile.profundidadeM.trim() &&
+           !pile.arrasamentoM.trim() &&
            !pile.comprimentoUtilM.trim();
   };
 
@@ -117,6 +166,33 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
 
   const updatePile = (index: number, fn: (p: PITPile) => void) => {
     setField((d) => { fn(d.piles[index]); });
+  };
+
+  const toggleSelectMode = () => {
+    setSelectMode((prev) => !prev);
+    setSelected(new Set());
+  };
+
+  const toggleSelected = (index: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index); else next.add(index);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelected(new Set(value.piles.map((_, i) => i)));
+  const clearSelected = () => setSelected(new Set());
+
+  const removeSelected = () => {
+    setField((d) => {
+      d.piles = d.piles.filter((_, i) => !selected.has(i));
+      if (d.piles.length === 0) {
+        d.piles.push({ estacaNome: '', estacaTipo: '', diametroCm: '', profundidadeM: '', arrasamentoM: '', comprimentoUtilM: '' });
+      }
+    });
+    setSelected(new Set());
+    setSelectMode(false);
   };
 
   const divider = <div className="my-4 sm:my-6 border-t border-gray-200 dark:border-gray-800" />;
@@ -154,22 +230,180 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
 
         {/* Serviços executados - Múltiplas estacas */}
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Serviços executados</h3>
-            <button
-              type="button"
-              onClick={addPile}
-              className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-            >
-              Adicionar estaca
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectMode ? (
+                <>
+                  <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{selected.size} selecionada{selected.size === 1 ? '' : 's'}</span>
+                  <button type="button" onClick={selectAll} className="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700">
+                    Selecionar todas
+                  </button>
+                  {selected.size > 0 && (
+                    <button type="button" onClick={clearSelected} className="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700">
+                      Limpar
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={removeSelected}
+                    disabled={selected.size === 0}
+                    className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remover selecionadas
+                  </button>
+                  <button type="button" onClick={toggleSelectMode} className="p-2 text-gray-500 hover:text-gray-700 rounded-lg" title="Cancelar seleção">
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={toggleSelectMode}
+                    className="px-3 py-2 bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" /> Selecionar / remover em massa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkOpen((v) => !v)}
+                    className="px-3 py-2 bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1"
+                  >
+                    <Layers className="w-3.5 h-3.5" /> Adicionar em massa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addPile}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                  >
+                    Adicionar estaca
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+
+          {bulkOpen && !selectMode && (
+            <div className="mb-4 border border-green-200 dark:border-green-800 rounded-lg p-3 sm:p-4 bg-green-50/50 dark:bg-green-900/10">
+              <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Adicionar várias estacas de uma vez</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Útil quando as estacas têm o mesmo tipo, diâmetro, profundidade e arrasamento — só o nome muda.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
+                <div className="col-span-1">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Quantidade</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={bulkQtd}
+                    onChange={(e) => setBulkQtd(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm"
+                    placeholder="5"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Nome inicial</label>
+                  <input
+                    type="text"
+                    value={bulkNomeInicial}
+                    onChange={(e) => setBulkNomeInicial(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm"
+                    placeholder="Ex.: E-01"
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Tipo da estaca</label>
+                  <input
+                    type="text"
+                    value={bulkTipo}
+                    onChange={(e) => setBulkTipo(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm"
+                    placeholder="Ex.: Pré-moldada"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Diâmetro (cm)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={bulkDiametro}
+                    onChange={(e) => setBulkDiametro(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm"
+                    placeholder="Ex.: 50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Profundidade (m)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={bulkProfundidade}
+                    onChange={(e) => setBulkProfundidade(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm"
+                    placeholder="Ex.: 12,00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Arrasamento (m)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={bulkArrasamento}
+                    onChange={(e) => setBulkArrasamento(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm"
+                    placeholder="Ex.: 0,30"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={addBulkPiles}
+                  className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                >
+                  Adicionar estacas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkOpen(false)}
+                  className="px-3 py-2 text-gray-600 dark:text-gray-300 text-sm font-medium hover:text-gray-800"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
 
           {value.piles.map((pile, index) => {
             const isEmpty = isPileEmpty(pile);
             const isConfirmed = pile.confirmado === true;
-            const isExpanded = pile.isExpanded !== false || isEmpty;
-            
+            const isExpanded = (pile.isExpanded !== false || isEmpty) && !selectMode;
+            const isChecked = selected.has(index);
+
+            // Modo seleção: linha compacta com checkbox, sem expandir pra edição.
+            if (selectMode) {
+              return (
+                <div
+                  key={index}
+                  onClick={() => toggleSelected(index)}
+                  className={`mb-2 border rounded-lg p-3 flex items-center gap-3 cursor-pointer transition-colors ${isChecked ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50'}`}
+                >
+                  {isChecked ? <CheckSquare className="w-5 h-5 text-green-600 flex-shrink-0" /> : <Square className="w-5 h-5 text-gray-400 flex-shrink-0" />}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {pile.estacaNome?.trim() || 'Estaca sem nome'}
+                    </span>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      {[
+                        pile.estacaTipo && `Tipo: ${pile.estacaTipo}`,
+                        pile.diametroCm && `Ø: ${pile.diametroCm}cm`,
+                        pile.profundidadeM && `Prof: ${pile.profundidadeM}m`,
+                      ].filter(Boolean).join(' • ')}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             // Estaca compilada (confirmada e não expandida)
             if (isConfirmed && !isExpanded) {
               return (
@@ -352,5 +586,3 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
     </div>
   );
 };
-
-
