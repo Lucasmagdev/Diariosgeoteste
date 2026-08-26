@@ -162,19 +162,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     console.error('Erro de autenticação Supabase:', { msg, status, error });
     
-    // Erro 400 geralmente significa credenciais inválidas
-    if (status === 400 || msg.includes('invalid login credentials') || msg.includes('invalid')) {
-      return { 
-        ok: false, 
-        code: 'invalid_credentials', 
-        message: 'Email ou senha incorretos. Se é seu primeiro acesso, crie uma conta primeiro.' 
-      };
-    }
     if (msg.includes('email not confirmed')) {
       return { ok: false, code: 'email_not_confirmed', message: 'E-mail não confirmado. Verifique sua caixa de entrada.' };
     }
     if (msg.includes('user not found')) {
       return { ok: false, code: 'user_not_found', message: 'Usuário não encontrado. Crie uma conta primeiro.' };
+    }
+    // Erro 400 geralmente significa credenciais inválidas
+    if (status === 400 || msg.includes('invalid login credentials') || msg.includes('invalid')) {
+      return {
+        ok: false,
+        code: 'invalid_credentials',
+        message: 'Email ou senha incorretos. Se é seu primeiro acesso, crie uma conta primeiro.'
+      };
     }
     return { ok: false, code: 'unknown', message: 'Não foi possível fazer login. Verifique suas credenciais e tente novamente.' };
   };
