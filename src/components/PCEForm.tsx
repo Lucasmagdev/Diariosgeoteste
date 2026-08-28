@@ -95,10 +95,6 @@ export const PCEForm: React.FC<PCEFormProps> = ({ value, onChange }) => {
       if (hasData) {
         pile.confirmado = true;
         pile.isExpanded = false;
-        
-        // Move estaca confirmada para o final
-        const confirmedPile = d.piles.splice(index, 1)[0];
-        d.piles.push(confirmedPile);
       }
     });
   };

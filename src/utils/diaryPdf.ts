@@ -448,6 +448,16 @@ async function buildDiaryDoc(data: DiaryPdfData): Promise<jsPDF> {
     y += 3;
   };
 
+  // ----- total de itens de uma tabela (soma real, não depende de campo digitado)
+  const totalLine = (label: string, count: number) => {
+    ensure(6);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    setText(BODY);
+    doc.text(`${label}: ${count}`, MX + CW, y, { align: 'right' });
+    y += 5;
+  };
+
   // ----- ocorrências
   const occurrences = (value: string) => {
     sectionTitle('Ocorrências');
@@ -550,6 +560,7 @@ async function buildDiaryDoc(data: DiaryPdfData): Promise<jsPDF> {
         [1, 0.9, 1.3, 1, 1],
       );
     }
+    totalLine('Total de estacas', pcePiles.length);
 
     if (heli) {
       sectionTitle('Cravação e abastecimento');
@@ -592,6 +603,7 @@ async function buildDiaryDoc(data: DiaryPdfData): Promise<jsPDF> {
       pitPiles.map((p) => [orNI(p.estaca_nome), orNI(p.estaca_tipo), orNI(p.diametro_cm), orNI(p.profundidade_m), orNI(p.arrasamento_m), orNI(p.comprimento_util_m)]),
       [0.9, 0.9, 1, 1, 1, 1.2],
     );
+    totalLine('Total de estacas', pitPiles.length);
 
     occurrences(d.ocorrencias || diary?.observations);
   } else if (kind === 'PLACA') {
@@ -621,6 +633,7 @@ async function buildDiaryDoc(data: DiaryPdfData): Promise<jsPDF> {
       placaPiles.map((p) => [orNI(p.nome), orNI(p.carga_trabalho_1_kgf_cm2), orNI(p.carga_trabalho_2_kgf_cm2)]),
       [1, 1.2, 1.2],
     );
+    totalLine('Total de pontos', placaPiles.length);
 
     occurrences(d.ocorrencias || diary?.observations);
   } else if (kind === 'PDA') {
@@ -641,6 +654,7 @@ async function buildDiaryDoc(data: DiaryPdfData): Promise<jsPDF> {
       pdaDiarioPiles.map((p) => [orNI(p.nome), orNI(p.tipo), orNI(p.diametro_cm), orNI(p.profundidade_m), orNI(p.carga_trabalho_tf), orNI(p.carga_ensaio_tf)]),
       [0.9, 0.9, 1, 1.2, 1.2, 1.2],
     );
+    totalLine('Total de estacas', pdaDiarioPiles.length);
 
     sectionTitle('Operação e abastecimento');
     fieldsGrid([

@@ -90,10 +90,6 @@ export const PDADiaryForm: React.FC<PDADiaryFormProps> = ({ value, onChange }) =
       if (hasData) {
         row.confirmado = true;
         row.isExpanded = false;
-        
-        // Move estaca confirmada para o final
-        const confirmedRow = d.piles.splice(index, 1)[0];
-        d.piles.push(confirmedRow);
       }
     });
   };
