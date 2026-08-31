@@ -1505,7 +1505,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
             )}
             {activeQuickSheet === 'pit' && (
               <div className="space-y-3">
-                <PITForm value={pitData} onChange={setPitData} equipamentosDisponiveis={equipamentos.filter(e => e.tipo === 'PIT')} />
+                <PITForm value={pitData} onChange={setPitData} equipamentosDisponiveis={equipamentos.filter(e => e.tipo === 'PIT')} diaryDate={formData.date} />
               </div>
             )}
             {activeQuickSheet === 'placa' && (
@@ -1941,7 +1941,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
 
           {formData.type === 'PIT' && (
             <div className="mt-6">
-              <PITForm value={pitData} onChange={setPitData} equipamentosDisponiveis={equipamentos.filter(e => e.tipo === 'PIT')} />
+              <PITForm value={pitData} onChange={setPitData} equipamentosDisponiveis={equipamentos.filter(e => e.tipo === 'PIT')} diaryDate={formData.date} />
             </div>
           )}
 

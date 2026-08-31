@@ -133,6 +133,21 @@ O sistema suporta dois modos:
 - **Mobile:** Capacitor (para APK)
 - **Deploy:** Netlify / Vercel
 
+## Sincronização dos ensaios PIT
+
+O botão **Sincronizar ensaios** do diário PIT consulta os arquivos enviados pelo equipamento na data do diário. A leitura do projeto `fpit-sync` acontece somente na Netlify Function; a chave administrativa nunca é enviada ao navegador.
+
+Configure estas variáveis no ambiente do Netlify:
+
+```text
+PIT_SUPABASE_URL=https://mphomlxniavqmvxhacii.supabase.co
+PIT_SUPABASE_SERVICE_ROLE_KEY=<service role do projeto fpit-sync>
+VITE_SUPABASE_URL=<URL do projeto do Diário>
+VITE_SUPABASE_ANON_KEY=<anon key do projeto do Diário>
+```
+
+Qualquer usuário autenticado no Diário pode sincronizar. O técnico escolhe a pasta de origem antes da importação; o app preenche nome da estaca, diâmetro e profundidade como sugestões, enquanto tipo e arrasamento continuam manuais.
+
 ## 📝 Scripts Disponíveis
 
 ```bash

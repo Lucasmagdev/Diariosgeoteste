@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Edit, Check, Layers, Trash2, X, CheckSquare, Square } from 'lucide-react';
+import { Edit, Check, Layers, Trash2, X, CheckSquare, Square, RefreshCw, Download } from 'lucide-react';
+import { downloadPitPiles, fetchPitEnsaios, PitRemoteEnsaio } from '../lib/pitSync';
 
 const parseBR = (value: string): number | null => {
   const t = (value || '').trim().replace(',', '.');
@@ -36,6 +37,7 @@ const generateBulkNomes = (base: string, qty: number): string[] => {
 };
 
 export interface PITPile {
+  ensaioOrigemId?: string;
   estacaNome: string;
   estacaTipo: string;
   diametroCm: string;
@@ -58,9 +60,15 @@ interface PITFormProps {
   value: PITFormData;
   onChange: (next: PITFormData) => void;
   equipamentosDisponiveis: { id: string; nome: string }[];
+  diaryDate?: string;
 }
 
-export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosDisponiveis }) => {
+interface PitSyncGroup {
+  pastaOrigem: string;
+  ensaios: PitRemoteEnsaio[];
+}
+
+export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosDisponiveis, diaryDate = '' }) => {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkQtd, setBulkQtd] = useState('5');
   const [bulkNomeInicial, setBulkNomeInicial] = useState('E-01');
@@ -71,6 +79,11 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
 
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncImporting, setSyncImporting] = useState('');
+  const [syncGroups, setSyncGroups] = useState<PitSyncGroup[]>([]);
+  const [syncError, setSyncError] = useState('');
+  const [syncMessage, setSyncMessage] = useState('');
 
   const setField = (fn: (draft: PITFormData) => void) => {
     // ✅ OTIMIZAÇÃO: structuredClone() é nativo e muito mais rápido que JSON.parse(JSON.stringify())
@@ -81,6 +94,76 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
 
   const setEquipamento = (equip: { id: string; nome: string }) => {
     setField((d) => { d.equipamento = equip.nome; d.equipamentoId = equip.id; });
+  };
+
+  const loadSyncedEnsaios = async () => {
+    setSyncError('');
+    setSyncMessage('');
+    setSyncGroups([]);
+    if (!diaryDate) {
+      setSyncError('Preencha a data do diário antes de sincronizar os ensaios.');
+      return;
+    }
+
+    setSyncLoading(true);
+    try {
+      const ensaios = await fetchPitEnsaios(diaryDate);
+      const grouped = new Map<string, PitRemoteEnsaio[]>();
+      ensaios.forEach((ensaio) => {
+        const folder = ensaio.pastaOrigem?.trim() || 'Sem pasta informada';
+        grouped.set(folder, [...(grouped.get(folder) || []), ensaio]);
+      });
+      setSyncGroups(Array.from(grouped, ([pastaOrigem, groupedEnsaios]) => ({ pastaOrigem, ensaios: groupedEnsaios })));
+      if (ensaios.length === 0) setSyncMessage('Nenhum ensaio enviado pelo PIT foi encontrado nessa data.');
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Não foi possível sincronizar os ensaios.');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const importSyncGroup = async (group: PitSyncGroup) => {
+    setSyncError('');
+    setSyncMessage('');
+    setSyncImporting(group.pastaOrigem);
+    try {
+      const { piles, failed } = await downloadPitPiles(group.ensaios);
+      let importedCount = 0;
+      let duplicateCount = 0;
+
+      setField((d) => {
+        const currentPiles = d.piles.filter((pile) =>
+          pile.estacaNome.trim() || pile.estacaTipo.trim() || pile.diametroCm.trim() ||
+          pile.profundidadeM.trim() || pile.arrasamentoM.trim() || pile.comprimentoUtilM.trim()
+        );
+        const existingIds = new Set(currentPiles.map((pile) => pile.ensaioOrigemId).filter(Boolean));
+        const existingNames = new Set(currentPiles.map((pile) => pile.estacaNome.trim().toLocaleLowerCase('pt-BR')).filter(Boolean));
+        const imported = piles.filter((pile) => {
+          const normalizedName = pile.estacaNome.trim().toLocaleLowerCase('pt-BR');
+          if (existingIds.has(pile.ensaioOrigemId) || existingNames.has(normalizedName)) {
+            duplicateCount += 1;
+            return false;
+          }
+          existingIds.add(pile.ensaioOrigemId);
+          existingNames.add(normalizedName);
+          return true;
+        });
+        importedCount = imported.length;
+        d.piles = [...imported, ...currentPiles];
+        d.totalEstacas = String(d.piles.length);
+      });
+
+      const details = [
+        importedCount > 0 ? `${importedCount} ensaio${importedCount === 1 ? '' : 's'} importado${importedCount === 1 ? '' : 's'}` : 'Nenhum ensaio novo importado',
+        duplicateCount > 0 ? `${duplicateCount} já existente${duplicateCount === 1 ? '' : 's'}` : '',
+        failed > 0 ? `${failed} arquivo${failed === 1 ? '' : 's'} não pôde${failed === 1 ? '' : 'ram'} ser lido${failed === 1 ? '' : 's'}` : '',
+      ].filter(Boolean);
+      setSyncMessage(`${details.join(' • ')}. Confira os dados antes de confirmar.`);
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Não foi possível importar os arquivos do PIT.');
+    } finally {
+      setSyncImporting('');
+    }
   };
 
   const addPile = () => {
@@ -256,6 +339,15 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
                 <>
                   <button
                     type="button"
+                    onClick={loadSyncedEnsaios}
+                    disabled={syncLoading || Boolean(syncImporting)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${syncLoading ? 'animate-spin' : ''}`} />
+                    {syncLoading ? 'Buscando...' : 'Sincronizar ensaios'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={toggleSelectMode}
                     className="px-3 py-2 bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-1"
                   >
@@ -279,6 +371,46 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
               )}
             </div>
           </div>
+
+          {syncError && (
+            <div className="mb-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+              {syncError}
+            </div>
+          )}
+
+          {syncMessage && (
+            <div className="mb-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-3 py-2 text-sm text-green-700 dark:text-green-300">
+              {syncMessage}
+            </div>
+          )}
+
+          {syncGroups.length > 0 && (
+            <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/10 p-3 sm:p-4">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Ensaios encontrados em {diaryDate.split('-').reverse().join('/')}</p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">Escolha somente a pasta desta obra. Os valores importados continuam editáveis e precisam ser conferidos.</p>
+              <div className="mt-3 space-y-2">
+                {syncGroups.map((group) => (
+                  <div key={group.pastaOrigem} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-blue-100 dark:border-blue-900 bg-white dark:bg-gray-950 p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{group.pastaOrigem}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{group.ensaios.length} ensaio{group.ensaios.length === 1 ? '' : 's'}: {group.ensaios.map((ensaio) => ensaio.nomeOriginal).join(', ')}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => importSyncGroup(group)}
+                      disabled={Boolean(syncImporting)}
+                      className="flex-shrink-0 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
+                    >
+                      {syncImporting === group.pastaOrigem
+                        ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        : <Download className="w-3.5 h-3.5" />}
+                      {syncImporting === group.pastaOrigem ? 'Importando...' : `Importar ${group.ensaios.length}`}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {bulkOpen && !selectMode && (
             <div className="mb-4 border border-green-200 dark:border-green-800 rounded-lg p-3 sm:p-4 bg-green-50/50 dark:bg-green-900/10">
