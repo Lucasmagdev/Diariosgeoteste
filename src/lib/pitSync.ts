@@ -11,6 +11,7 @@ export interface PitRemoteEnsaio {
 
 export interface PitImportedPile {
   ensaioOrigemId: string;
+  comprimentoUtilImportado: boolean;
   estacaNome: string;
   estacaTipo: string;
   diametroCm: string;
@@ -56,9 +57,10 @@ export const extractPitPile = (arrayBuffer: ArrayBuffer, ensaio: PitRemoteEnsaio
     estacaNome: ensaio.nomeOriginal.replace(/\.[^.]+$/, ''),
     estacaTipo: '',
     diametroCm: diameterCm ? formatMeasurement(diameterCm) : '',
-    profundidadeM: LE > 0 ? formatMeasurement(LE) : '',
+    profundidadeM: '',
     arrasamentoM: '',
-    comprimentoUtilM: '',
+    comprimentoUtilM: LE > 0 ? formatMeasurement(LE) : '',
+    comprimentoUtilImportado: LE > 0,
     confirmado: false,
     isExpanded: true,
   };

@@ -19,6 +19,13 @@ const calcComprimentoUtilM = (profundidadeM: string, arrasamentoM: string): stri
   return formatBR(p - a);
 };
 
+const calcProfundidadeM = (comprimentoUtilM: string, arrasamentoM: string): string => {
+  const c = parseBR(comprimentoUtilM);
+  const a = parseBR(arrasamentoM);
+  if (c === null || a === null) return '';
+  return formatBR(c + a);
+};
+
 // Gera nomes sequenciais pra estaca em massa. Se o nome inicial termina em
 // numero ("E-01"), incrementa preservando os zeros a esquerda (E-02, E-03...).
 // Sem numero no final, so acrescenta "-2", "-3" etc.
@@ -38,6 +45,7 @@ const generateBulkNomes = (base: string, qty: number): string[] => {
 
 export interface PITPile {
   ensaioOrigemId?: string;
+  comprimentoUtilImportado?: boolean;
   estacaNome: string;
   estacaTipo: string;
   diametroCm: string;
@@ -642,6 +650,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
                     value={pile.profundidadeM}
                     onChange={(e) => updatePile(index, (p) => {
                       p.profundidadeM = e.target.value;
+                      p.comprimentoUtilImportado = false;
                       p.comprimentoUtilM = calcComprimentoUtilM(p.profundidadeM, p.arrasamentoM);
                     })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -656,7 +665,11 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
                     value={pile.arrasamentoM}
                     onChange={(e) => updatePile(index, (p) => {
                       p.arrasamentoM = e.target.value;
-                      p.comprimentoUtilM = calcComprimentoUtilM(p.profundidadeM, p.arrasamentoM);
+                      if (p.comprimentoUtilImportado || (!p.profundidadeM.trim() && p.comprimentoUtilM.trim())) {
+                        p.profundidadeM = calcProfundidadeM(p.comprimentoUtilM, p.arrasamentoM);
+                      } else {
+                        p.comprimentoUtilM = calcComprimentoUtilM(p.profundidadeM, p.arrasamentoM);
+                      }
                     })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Ex.: 0,30"
@@ -669,9 +682,11 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
                     readOnly
                     value={pile.comprimentoUtilM}
                     className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 cursor-not-allowed"
-                    placeholder="Profundidade − Arrasamento"
+                    placeholder="Importado do PIT ou calculado"
                   />
-                  <p className="mt-1 text-xs text-gray-400">Calculado automaticamente</p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {pile.comprimentoUtilImportado ? 'Importado do ensaio PIT' : 'Calculado automaticamente'}
+                  </p>
                 </div>
               </div>
             </div>

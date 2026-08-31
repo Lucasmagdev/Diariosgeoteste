@@ -146,7 +146,7 @@ VITE_SUPABASE_URL=<URL do projeto do Diário>
 VITE_SUPABASE_ANON_KEY=<anon key do projeto do Diário>
 ```
 
-Qualquer usuário autenticado no Diário pode sincronizar. O técnico escolhe a pasta de origem antes da importação; o app preenche nome da estaca, diâmetro e profundidade como sugestões, enquanto tipo e arrasamento continuam manuais.
+Qualquer usuário autenticado no Diário pode sincronizar. O técnico escolhe a pasta de origem antes da importação; o app preenche nome da estaca, diâmetro e comprimento útil como sugestões, enquanto tipo e arrasamento continuam manuais.
 
 ## 📝 Scripts Disponíveis
 
