@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star } from 'lucide-react';
+import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star, Radio } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomNav } from './BottomNav';
 
@@ -42,6 +42,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     { key: 'clients', label: 'Clientes', icon: Building2 },
     { key: 'portal', label: 'Portal do Cliente', icon: Globe },
     { key: 'surveys', label: 'Pesquisas', icon: Star },
+    { key: 'pit-ensaios', label: 'Ensaios PIT', icon: Radio },
   ];
 
   const menuItems = user?.role === 'admin' ? adminMenuItems : baseMenuItems;
@@ -55,6 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     clients: 'Clientes',
     portal: 'Portal do Cliente',
     surveys: 'Pesquisas',
+    'pit-ensaios': 'Ensaios PIT',
   };
 
   const handleMenuClick = (page: string) => {

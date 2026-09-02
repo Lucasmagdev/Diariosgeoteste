@@ -124,6 +124,54 @@ export const downloadBlobFile = (bytes: ArrayBuffer, fileName: string, mime = 'a
   URL.revokeObjectURL(url);
 };
 
+export interface PitBrowseEnsaio {
+  id: string;
+  nomeOriginal: string;
+  pastaOrigem: string | null;
+  criadoNoEquipamento: string;
+}
+
+export interface PitBrowseFilters {
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface PitBrowseResult {
+  ensaios: PitBrowseEnsaio[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// Lista os ensaios enviados, sem exigir data (usado na aba "Ensaios PIT",
+// diferente de fetchPitEnsaios que exige a data do diário).
+export const fetchAllPitEnsaios = async (filters: PitBrowseFilters = {}): Promise<PitBrowseResult> => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Sua sessão expirou. Entre novamente.');
+
+  const response = await fetch('/.netlify/functions/pit-ensaios-browse', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(filters),
+  });
+
+  const payload = await response.json().catch(() => ({})) as Partial<PitBrowseResult> & { error?: string };
+  if (!response.ok) throw new Error(payload.error || 'Não foi possível listar os ensaios do PIT.');
+  return {
+    ensaios: payload.ensaios || [],
+    total: payload.total || 0,
+    limit: payload.limit || filters.limit || 50,
+    offset: payload.offset || filters.offset || 0,
+  };
+};
+
 export const downloadPitPiles = async (ensaios: PitRemoteEnsaio[]) => {
   const results = await Promise.allSettled(ensaios.map(async (ensaio) => {
     const response = await fetch(ensaio.downloadUrl);

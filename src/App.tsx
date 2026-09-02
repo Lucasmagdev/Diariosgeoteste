@@ -20,6 +20,7 @@ import { PublicChecklistFill } from './components/PublicChecklistFill';
 import { PublicSurveyFill } from './components/PublicSurveyFill';
 import { PortalManagement } from './components/PortalManagement';
 import { SatisfactionSurveys } from './components/SatisfactionSurveys';
+import { PitEnsaiosPanel } from './components/PitEnsaiosPanel';
 import { ClientPortal } from './components/ClientPortal';
 import { IntroScreen } from './components/IntroScreen';
 
@@ -154,6 +155,8 @@ const AppContent: React.FC = () => {
         return user.role === 'admin' ? <PortalManagement /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'surveys':
         return user.role === 'admin' ? <SatisfactionSurveys /> : <Dashboard onPageChange={setCurrentPage} />;
+      case 'pit-ensaios':
+        return user.role === 'admin' ? <PitEnsaiosPanel /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'profile':
         return <ProfilePage />;
       default:
