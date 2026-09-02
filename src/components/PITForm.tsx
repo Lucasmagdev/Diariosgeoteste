@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Edit, Check, Layers, Trash2, X, CheckSquare, Square, RefreshCw, Download } from 'lucide-react';
-import { downloadPitPiles, fetchPitEnsaios, PitRemoteEnsaio } from '../lib/pitSync';
+import { Edit, Check, Layers, Trash2, X, CheckSquare, Square, RefreshCw, Download, FileDown, LineChart } from 'lucide-react';
+import { downloadPitPiles, downloadBlobFile, fetchPitEnsaios, fetchPitEnsaioSignal, PitRemoteEnsaio } from '../lib/pitSync';
+import { generateSinalPdf } from '../lib/pitSignalPdf';
 
 const parseBR = (value: string): number | null => {
   const t = (value || '').trim().replace(',', '.');
@@ -92,6 +93,7 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
   const [syncGroups, setSyncGroups] = useState<PitSyncGroup[]>([]);
   const [syncError, setSyncError] = useState('');
   const [syncMessage, setSyncMessage] = useState('');
+  const [signalBusy, setSignalBusy] = useState('');
 
   const setField = (fn: (draft: PITFormData) => void) => {
     // ✅ OTIMIZAÇÃO: structuredClone() é nativo e muito mais rápido que JSON.parse(JSON.stringify())
@@ -171,6 +173,44 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
       setSyncError(error instanceof Error ? error.message : 'Não foi possível importar os arquivos do PIT.');
     } finally {
       setSyncImporting('');
+    }
+  };
+
+  // Baixa o arquivo bruto (.PTE) do ensaio que originou a estaca — pede
+  // um link assinado novo na hora, porque o da sincronizacao ja expirou.
+  const baixarSinalBruto = async (pile: PITPile, index: number) => {
+    if (!pile.ensaioOrigemId) return;
+    setSyncError('');
+    setSignalBusy(`${index}-pte`);
+    try {
+      const { downloadUrl, nomeOriginal } = await fetchPitEnsaioSignal(pile.ensaioOrigemId);
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error('Falha ao baixar o arquivo do ensaio.');
+      const bytes = await response.arrayBuffer();
+      downloadBlobFile(bytes, nomeOriginal || `${pile.estacaNome || 'estaca'}.pte`);
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Não foi possível baixar o sinal.');
+    } finally {
+      setSignalBusy('');
+    }
+  };
+
+  // Gera o grafico do sinal (reflectograma) em PDF a partir do mesmo .PTE.
+  const baixarSinalGrafico = async (pile: PITPile, index: number) => {
+    if (!pile.ensaioOrigemId) return;
+    setSyncError('');
+    setSignalBusy(`${index}-pdf`);
+    try {
+      const { downloadUrl } = await fetchPitEnsaioSignal(pile.ensaioOrigemId);
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error('Falha ao baixar o arquivo do ensaio.');
+      const bytes = await response.arrayBuffer();
+      const nomeArquivo = `sinal-${(pile.estacaNome || 'estaca').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`;
+      await generateSinalPdf(bytes, { estacaNome: pile.estacaNome || 'Estaca', fileName: nomeArquivo });
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Não foi possível gerar o gráfico do sinal.');
+    } finally {
+      setSignalBusy('');
     }
   };
 
@@ -562,6 +602,28 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {pile.ensaioOrigemId && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => baixarSinalGrafico(pile, index)}
+                            disabled={signalBusy === `${index}-pdf`}
+                            className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50"
+                            title="Baixar gráfico do sinal (PDF)"
+                          >
+                            {signalBusy === `${index}-pdf` ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LineChart className="w-4 h-4" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => baixarSinalBruto(pile, index)}
+                            disabled={signalBusy === `${index}-pte`}
+                            className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
+                            title="Baixar arquivo bruto do ensaio (.PTE)"
+                          >
+                            {signalBusy === `${index}-pte` ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                          </button>
+                        </>
+                      )}
                       <button
                         type="button"
                         onClick={() => toggleExpandPile(index)}
@@ -591,6 +653,28 @@ export const PITForm: React.FC<PITFormProps> = ({ value, onChange, equipamentosD
                     {pile.estacaNome?.trim() || 'Nova Estaca'}
                   </p>
                   <div className="flex items-center gap-2">
+                    {pile.ensaioOrigemId && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => baixarSinalGrafico(pile, index)}
+                          disabled={signalBusy === `${index}-pdf`}
+                          className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50"
+                          title="Baixar gráfico do sinal (PDF)"
+                        >
+                          {signalBusy === `${index}-pdf` ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LineChart className="w-4 h-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => baixarSinalBruto(pile, index)}
+                          disabled={signalBusy === `${index}-pte`}
+                          className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
+                          title="Baixar arquivo bruto do ensaio (.PTE)"
+                        >
+                          {signalBusy === `${index}-pte` ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                        </button>
+                      </>
+                    )}
                     {!isEmpty && (
                       <button
                         type="button"

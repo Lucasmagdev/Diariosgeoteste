@@ -85,6 +85,45 @@ export const fetchPitEnsaios = async (diaryDate: string): Promise<PitRemoteEnsai
   return Array.isArray(payload.ensaios) ? payload.ensaios : [];
 };
 
+export interface PitSignedSignal {
+  downloadUrl: string;
+  nomeOriginal: string;
+}
+
+// O link assinado da sincronizacao expira em 5 minutos — inutil pra
+// baixar o sinal dias depois, com o diario ja salvo. Pede um link novo
+// na hora, pelo id do ensaio salvo na estaca (ensaioOrigemId).
+export const fetchPitEnsaioSignal = async (ensaioOrigemId: string): Promise<PitSignedSignal> => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Sua sessão expirou. Entre novamente para baixar o sinal.');
+
+  const response = await fetch('/.netlify/functions/pit-ensaio-signal', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ id: ensaioOrigemId }),
+  });
+
+  const payload = await response.json().catch(() => ({})) as { downloadUrl?: string; nomeOriginal?: string; error?: string };
+  if (!response.ok || !payload.downloadUrl) throw new Error(payload.error || 'Não foi possível obter o link do sinal.');
+  return { downloadUrl: payload.downloadUrl, nomeOriginal: payload.nomeOriginal || 'ensaio.pte' };
+};
+
+export const downloadBlobFile = (bytes: ArrayBuffer, fileName: string, mime = 'application/octet-stream') => {
+  const blob = new Blob([bytes], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 export const downloadPitPiles = async (ensaios: PitRemoteEnsaio[]) => {
   const results = await Promise.allSettled(ensaios.map(async (ensaio) => {
     const response = await fetch(ensaio.downloadUrl);

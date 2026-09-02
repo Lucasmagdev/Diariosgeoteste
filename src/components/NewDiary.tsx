@@ -386,6 +386,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
               ocorrencias: strOrEmpty(pit.ocorrencias),
               totalEstacas: pit.total_estacas === null || pit.total_estacas === undefined ? '' : String(pit.total_estacas),
               piles: (piles && piles.length > 0) ? piles.map((p: any) => ({
+                ensaioOrigemId: p.ensaio_origem_id || undefined,
                 estacaNome: strOrEmpty(p.estaca_nome),
                 estacaTipo: strOrEmpty(p.estaca_tipo),
                 diametroCm: numToBRString(p.diametro_cm),
@@ -761,6 +762,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
           const piles = pitData.piles.map((pile, idx) => ({
             pit_id: pitId,
             ordem: idx + 1,
+            ensaio_origem_id: pile.ensaioOrigemId || null,
             estaca_nome: pile.estacaNome || null,
             estaca_tipo: pile.estacaTipo || null,
             diametro_cm: toDecimalOrNull(pile.diametroCm),
