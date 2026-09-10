@@ -8,7 +8,7 @@ import { PLACAForm, PLACAFormData } from './PLACAForm';
 import { PDAForm, PDAFormData } from './PDAForm';
 import { PDADiaryForm, PDADiaryFormData } from './PDADiaryForm';
 import { ClientSelector } from './ClientSelector';
-import { getEstados, getCidadesByEstado, getEstadoById, getCidadeById } from '../data/estadosCidades';
+import { getEstados, getEstadoById, getCidadeById } from '../data/estadosCidades';
 import { formatTime24hOrEmpty, maskTimeInput, normalizeTimeInput } from '../utils/time';
 
 interface NewDiaryProps {
@@ -93,7 +93,6 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
   });
 
   const [estados] = useState(getEstados());
-  const [cidades, setCidades] = useState<any[]>([]);
 
   const [pceData, setPceData] = useState<PCEFormData>({
     ensaioTipo: 'PCE CONVENCIONAL',
@@ -191,6 +190,8 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [equipamentos, setEquipamentos] = useState<{ id: string; tipo: string; nome: string }[]>([]);
+  const [obras, setObras] = useState<{ id: string; obraCode: string | null; name: string; clientId: string | null }[]>([]);
+  const [obraId, setObraId] = useState('');
   const diaryTypeOptions = ['PCE', 'PLACA', 'PIT', 'PDA', 'PDA_DIARIO'] as const;
   type DiaryType = typeof diaryTypeOptions[number];
   const [activeQuickSheet, setActiveQuickSheet] = useState<
@@ -262,6 +263,15 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
           setEquipamentos(equipData as any[]);
         }
 
+        // Buscar obras cadastradas (pra vincular o diario a obra certa)
+        const { data: obrasData, error: obrasError } = await supabase
+          .from('obras')
+          .select('id, obra_code, name, client_id')
+          .order('name');
+        if (!obrasError && obrasData) {
+          setObras(obrasData.map((o: any) => ({ id: o.id, obraCode: o.obra_code, name: o.name, clientId: o.client_id })));
+        }
+
         // Buscar todos os usuários para formar a equipe
         const { data, error } = await supabase
           .from('profiles')
@@ -326,17 +336,21 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
         });
         setShowTypeSelector(false);
         setHasSelectedType(true);
+        setObraId(diary.obra_id || '');
 
         const endereco = diary.endereco_detalhado;
         if (endereco?.estado_id) {
+          // Diario antigo pode ter so o id da cidade (selecionado no antigo
+          // dropdown); resolve o nome pra mostrar no campo de texto livre,
+          // que agora e a unica forma de editar a cidade.
+          const cidadeResolvida = endereco.cidade_id ? getCidadeById(endereco.estado_id, endereco.cidade_id) : null;
           setEnderecoDetalhado({
             estadoId: endereco.estado_id || 0,
             cidadeId: endereco.cidade_id || 0,
-            cidadeNomeLivre: endereco.cidade_id ? '' : (endereco.cidade_nome || ''),
+            cidadeNomeLivre: endereco.cidade_nome || cidadeResolvida?.nome || '',
             rua: endereco.rua || '',
             numero: endereco.numero || '',
           });
-          if (endereco.estado_id) setCidades(getCidadesByEstado(endereco.estado_id));
         }
 
         // Carrega os dados especificos do tipo (cabecalho + estacas)
@@ -601,6 +615,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
         user_id: user.id,
         diary_type: formData.type,
         client_name: formData.clientName.trim(),
+        obra_id: obraId || null,
         address: enderecoCompleto,
         endereco_detalhado: enderecoDetalhado.estadoId > 0 ? {
           estado_id: enderecoDetalhado.estadoId,
@@ -957,19 +972,12 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
   };
 
   const handleEstadoChange = (estadoId: number) => {
-      setEnderecoDetalhado(prev => ({
-        ...prev,
-        estadoId,
-        cidadeId: 0, // Reset cidade quando muda estado
-        cidadeNomeLivre: ''
-      }));
-    
-    if (estadoId > 0) {
-      const cidadesDoEstado = getCidadesByEstado(estadoId);
-      setCidades(cidadesDoEstado);
-    } else {
-      setCidades([]);
-    }
+    setEnderecoDetalhado(prev => ({
+      ...prev,
+      estadoId,
+      cidadeId: 0, // Reset cidade quando muda estado
+      cidadeNomeLivre: ''
+    }));
   };
 
   const handleEnderecoChange = (field: string, value: string | number) => {
@@ -1297,6 +1305,26 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                         Nenhum cliente cadastrado. {user?.role === 'admin' && 'Cadastre clientes na seção "Clientes".'}
                       </p>
                     )}
+                    {(() => {
+                      const clienteAtual = clients.find((c) => c.name === formData.clientName);
+                      const obrasDoCliente = clienteAtual ? obras.filter((o) => o.clientId === clienteAtual.id) : [];
+                      if (obrasDoCliente.length === 0) return null;
+                      return (
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Obra (opcional)</label>
+                          <select
+                            value={obraId}
+                            onChange={(e) => setObraId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                          >
+                            <option value="">Sem obra vinculada</option>
+                            {obrasDoCliente.map((o) => (
+                              <option key={o.id} value={o.id}>{o.obraCode ? `${o.obraCode} — ${o.name}` : o.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
               </div>
@@ -1403,36 +1431,15 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                     ))}
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Cidade (selecione ou digite) *</label>
-                    <select
-                      value={enderecoDetalhado.cidadeId}
-                      onChange={(e) => handleEnderecoChange('cidadeId', Number(e.target.value))}
-                      disabled={enderecoDetalhado.estadoId === 0}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value={0}>Selecione a cidade</option>
-                      {cidades.map((cidade) => (
-                        <option key={cidade.id} value={cidade.id}>
-                          {cidade.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Ou digite a cidade</label>
-                    <input
-                      type="text"
-                      value={enderecoDetalhado.cidadeNomeLivre}
-                      onChange={(e) => handleEnderecoChange('cidadeNomeLivre', e.target.value)}
-                      placeholder="Ex: Ouro Preto"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                      Pode escolher na lista ou apenas digitar; um dos dois é suficiente.
-                    </p>
-                  </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Cidade *</label>
+                  <input
+                    type="text"
+                    value={enderecoDetalhado.cidadeNomeLivre}
+                    onChange={(e) => handleEnderecoChange('cidadeNomeLivre', e.target.value)}
+                    placeholder="Ex: Ouro Preto"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  />
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="col-span-2">
@@ -1727,6 +1734,26 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                         Nenhum cliente cadastrado. {user?.role === 'admin' && 'Cadastre clientes na seção "Clientes".'}
                       </p>
                     )}
+                    {(() => {
+                      const clienteAtual = clients.find((c) => c.name === formData.clientName);
+                      const obrasDoCliente = clienteAtual ? obras.filter((o) => o.clientId === clienteAtual.id) : [];
+                      if (obrasDoCliente.length === 0) return null;
+                      return (
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Obra (opcional)</label>
+                          <select
+                            value={obraId}
+                            onChange={(e) => setObraId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                          >
+                            <option value="">Sem obra vinculada</option>
+                            {obrasDoCliente.map((o) => (
+                              <option key={o.id} value={o.id}>{o.obraCode ? `${o.obraCode} — ${o.name}` : o.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
               </div>
