@@ -43,7 +43,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     { key: 'portal', label: 'Portal do Cliente', icon: Globe },
     { key: 'surveys', label: 'Pesquisas', icon: Star },
     { key: 'pit-ensaios', label: 'Ensaios PIT', icon: Radio },
-    { key: 'asset-planner', label: 'Planejamento', icon: Package },
   ];
 
   const menuItems = user?.role === 'admin' ? adminMenuItems : baseMenuItems;
@@ -120,6 +119,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
             <Plus className="h-4 w-4" />
             Novo diário
           </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => handleMenuClick('asset-planner')}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+            >
+              <Package className="h-4 w-4" />
+              Malão Geoteste
+            </button>
+          )}
           <div className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -226,10 +234,23 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
         {/* Sidebar */}
         <nav className="hidden md:block w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 min-h-[calc(100vh-56px)] sticky top-14">
           <div className="p-4">
-            <button onClick={() => onPageChange('new-diary')} className="btn-primary mb-4 flex w-full items-center justify-center gap-2">
+            <button onClick={() => onPageChange('new-diary')} className="btn-primary mb-2 flex w-full items-center justify-center gap-2">
               <Plus className="h-4 w-4" />
               Novo diário
             </button>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => onPageChange('asset-planner')}
+                className={`mb-4 flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 font-semibold transition-colors ${
+                  currentPage === 'asset-planner'
+                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                    : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                }`}
+              >
+                <Package className="h-4 w-4" />
+                Malão Geoteste
+              </button>
+            )}
             <ul className="space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
