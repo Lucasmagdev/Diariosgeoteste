@@ -27,6 +27,45 @@ export default {
         ],
       },
       colors: {
+        background: 'oklch(var(--ap-background) / <alpha-value>)',
+        foreground: 'oklch(var(--ap-foreground) / <alpha-value>)',
+        card: {
+          DEFAULT: 'oklch(var(--ap-card) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-card-foreground) / <alpha-value>)',
+        },
+        popover: {
+          DEFAULT: 'oklch(var(--ap-popover) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-popover-foreground) / <alpha-value>)',
+        },
+        primary: {
+          DEFAULT: 'oklch(var(--ap-primary) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-primary-foreground) / <alpha-value>)',
+          glow: 'oklch(var(--ap-primary-glow) / <alpha-value>)',
+        },
+        success: {
+          DEFAULT: 'oklch(var(--ap-success) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-success-foreground) / <alpha-value>)',
+        },
+        warning: 'oklch(var(--ap-warning) / <alpha-value>)',
+        secondary: {
+          DEFAULT: 'oklch(var(--ap-secondary) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-secondary-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'oklch(var(--ap-muted) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-muted-foreground) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'oklch(var(--ap-accent) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-accent-foreground) / <alpha-value>)',
+        },
+        destructive: {
+          DEFAULT: 'oklch(var(--ap-destructive) / <alpha-value>)',
+          foreground: 'oklch(var(--ap-destructive-foreground) / <alpha-value>)',
+        },
+        border: 'oklch(var(--ap-border) / <alpha-value>)',
+        input: 'oklch(var(--ap-input) / <alpha-value>)',
+        ring: 'oklch(var(--ap-ring) / <alpha-value>)',
         brand: {
           DEFAULT: '#059669',
           50: '#ecfdf5',

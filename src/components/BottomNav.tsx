@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Home, Map, User } from 'lucide-react';
+import { FileText, Home, Map, Package, User } from 'lucide-react';
 
 interface BottomNavProps {
   currentPage: string;
@@ -13,6 +13,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onPageChange,
         { key: 'dashboard', label: 'Início', icon: Home },
         { key: 'diaries', label: 'Diários', icon: FileText },
         { key: 'equipment', label: 'Equipamentos', icon: Map },
+        { key: 'asset-planner', label: 'Planner', icon: Package },
         { key: 'profile', label: 'Perfil', icon: User },
       ]
     : [

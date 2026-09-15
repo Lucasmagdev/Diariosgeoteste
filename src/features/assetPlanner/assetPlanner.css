@@ -1,0 +1,82 @@
+.asset-planner {
+  --ap-background: 0.985 0.006 165;
+  --ap-foreground: 0.18 0.018 165;
+  --ap-card: 1 0 0;
+  --ap-card-foreground: 0.18 0.018 165;
+  --ap-popover: 1 0 0;
+  --ap-popover-foreground: 0.18 0.018 165;
+  --ap-primary: 0.55 0.14 165;
+  --ap-primary-foreground: 0.99 0 0;
+  --ap-primary-glow: 0.70 0.12 165;
+  --ap-success: 0.62 0.16 155;
+  --ap-success-foreground: 0.99 0 0;
+  --ap-warning: 0.78 0.16 75;
+  --ap-secondary: 0.96 0.012 165;
+  --ap-secondary-foreground: 0.22 0.035 165;
+  --ap-muted: 0.96 0.012 165;
+  --ap-muted-foreground: 0.46 0.03 165;
+  --ap-accent: 0.93 0.045 165;
+  --ap-accent-foreground: 0.22 0.035 165;
+  --ap-destructive: 0.577 0.245 27.325;
+  --ap-destructive-foreground: 0.984 0.003 247.858;
+  --ap-border: 0.90 0.012 165;
+  --ap-input: 0.90 0.012 165;
+  --ap-ring: 0.55 0.14 165;
+  background: oklch(var(--ap-background));
+  color: oklch(var(--ap-foreground));
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark .asset-planner {
+  --ap-background: 0.11 0.025 165;
+  --ap-foreground: 0.96 0.008 165;
+  --ap-card: 0.16 0.022 165;
+  --ap-card-foreground: 0.96 0.008 165;
+  --ap-popover: 0.16 0.022 165;
+  --ap-popover-foreground: 0.96 0.008 165;
+  --ap-primary: 0.62 0.15 165;
+  --ap-primary-foreground: 0.10 0.02 165;
+  --ap-primary-glow: 0.74 0.13 165;
+  --ap-success: 0.65 0.17 155;
+  --ap-success-foreground: 0.99 0 0;
+  --ap-warning: 0.82 0.18 75;
+  --ap-secondary: 0.22 0.025 165;
+  --ap-secondary-foreground: 0.92 0.01 165;
+  --ap-muted: 0.20 0.020 165;
+  --ap-muted-foreground: 0.68 0.025 165;
+  --ap-accent: 0.24 0.035 165;
+  --ap-accent-foreground: 0.92 0.01 165;
+  --ap-destructive: 0.65 0.22 22;
+  --ap-destructive-foreground: 0.96 0.005 165;
+  --ap-border: 0.32 0.018 165;
+  --ap-input: 0.34 0.018 165;
+  --ap-ring: 0.62 0.15 165;
+}
+
+.asset-planner *,
+.asset-planner *::before,
+.asset-planner *::after {
+  border-color: oklch(var(--ap-border));
+}
+
+.asset-planner h1,
+.asset-planner h2,
+.asset-planner h3,
+.asset-planner .font-display,
+.asset-planner .op-title {
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+}
+
+.asset-planner .font-mono-ui,
+.asset-planner .op-label {
+  font-family: "IBM Plex Mono", Consolas, monospace;
+}
+
+.asset-planner .op-label,
+.asset-planner .op-title {
+  text-transform: uppercase;
+}
+
+.asset-planner .op-title {
+  font-weight: 800;
+}

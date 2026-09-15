@@ -24,6 +24,8 @@ import { PitEnsaiosPanel } from './components/PitEnsaiosPanel';
 import { ClientPortal } from './components/ClientPortal';
 import { IntroScreen } from './components/IntroScreen';
 
+const AssetPlanner = React.lazy(() => import('./features/assetPlanner/AssetPlanner'));
+
 const INTRO_KEY = 'geoteste-admin-intro-seen';
 
 const AppContent: React.FC = () => {
@@ -157,6 +159,12 @@ const AppContent: React.FC = () => {
         return user.role === 'admin' ? <SatisfactionSurveys /> : <Dashboard onPageChange={setCurrentPage} />;
       case 'pit-ensaios':
         return user.role === 'admin' ? <PitEnsaiosPanel /> : <Dashboard onPageChange={setCurrentPage} />;
+      case 'asset-planner':
+        return user.role === 'admin' ? (
+          <React.Suspense fallback={<div className="py-12 text-center text-sm text-gray-500">Carregando planejamento...</div>}>
+            <AssetPlanner />
+          </React.Suspense>
+        ) : <Dashboard onPageChange={setCurrentPage} />;
       case 'profile':
         return <ProfilePage />;
       default:
@@ -167,7 +175,7 @@ const AppContent: React.FC = () => {
   return (
     <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
       {renderPage()}
-      {currentPage === 'new-diary' ? <DiaryHelp /> : <AgentAssistant />}
+      {currentPage === 'new-diary' ? <DiaryHelp /> : currentPage !== 'asset-planner' ? <AgentAssistant /> : null}
       <InstallPWA />
     </Layout>
   );

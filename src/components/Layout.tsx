@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star, Radio } from 'lucide-react';
+import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star, Radio, Package } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomNav } from './BottomNav';
 
@@ -43,6 +43,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     { key: 'portal', label: 'Portal do Cliente', icon: Globe },
     { key: 'surveys', label: 'Pesquisas', icon: Star },
     { key: 'pit-ensaios', label: 'Ensaios PIT', icon: Radio },
+    { key: 'asset-planner', label: 'Planejamento', icon: Package },
   ];
 
   const menuItems = user?.role === 'admin' ? adminMenuItems : baseMenuItems;
@@ -57,6 +58,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     portal: 'Portal do Cliente',
     surveys: 'Pesquisas',
     'pit-ensaios': 'Ensaios PIT',
+    'asset-planner': 'Planejamento de Patrimônio',
   };
 
   const handleMenuClick = (page: string) => {
@@ -254,8 +256,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-          <div className="max-w-7xl mx-auto">
+        <main className={`flex-1 ${currentPage === 'asset-planner' ? 'overflow-hidden pb-16 md:p-3 md:pb-3' : 'p-3 pb-20 sm:p-4 md:p-6 md:pb-6'}`}>
+          <div className={currentPage === 'asset-planner' ? 'h-full w-full' : 'mx-auto max-w-7xl'}>
             {children}
           </div>
         </main>
