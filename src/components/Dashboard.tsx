@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileText, Users, Building2, TrendingUp, Loader2,
-  Plus, ChevronRight, Calendar, Activity, ArrowUpRight
+  Plus, ChevronRight, Calendar, Activity, ArrowUpRight, Package
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
@@ -181,6 +181,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
         title={`Olá, ${firstName}`}
         description={user?.role === 'admin' ? 'Acompanhe a operação e as pendências do sistema.' : 'Acompanhe seus diários e atividades recentes.'}
       />
+
+      {user?.role === 'admin' && (
+        <button
+          type="button"
+          onClick={() => onPageChange?.('asset-planner')}
+          className="group flex w-full items-center gap-4 rounded-2xl bg-emerald-600 p-4 text-left text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:p-5"
+        >
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
+            <Package className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-semibold">Abrir Malão Geoteste</span>
+            <span className="mt-0.5 block text-sm text-emerald-50">Planejamento de patrimônio, equipamentos e obras</span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" />
+        </button>
+      )}
 
       {/* Error */}
       {error && (
