@@ -148,6 +148,24 @@ VITE_SUPABASE_ANON_KEY=<anon key do projeto do Diário>
 
 Qualquer usuário autenticado no Diário pode sincronizar. O técnico escolhe a pasta de origem antes da importação; o app preenche nome da estaca, diâmetro e comprimento útil como sugestões, enquanto tipo e arrasamento continuam manuais.
 
+## Sincronização de obras do Pipefy
+
+Quando um card novo entra no pipe **"02-Gestão de Obras - Geoteste"** (isso acontece quando o time comercial fecha contrato, via o conector "Criar Obra Fechada" no CRM), o Pipefy chama um webhook que cria Cliente (se ainda não existir) e Obra automaticamente no Diário — sem revisão manual.
+
+A function usa o código da obra e o nome da empresa que já vêm resolvidos no card mestre do pipe/database "Obras (Geoteste)" (campos "Número da Obra" e "Empresa"), então não recalcula nada — só espelha o que está no Pipefy.
+
+Configure estas variáveis no ambiente do Netlify:
+
+```text
+PIPEFY_API_TOKEN=<token pessoal do Pipefy usado para ler os cards>
+PIPEFY_WEBHOOK_SECRET=<string aleatória — validada no header x-webhook-secret>
+SUPABASE_SERVICE_ROLE_KEY=<service role do PRÓPRIO projeto do Diário>
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` é diferente do `PIT_SUPABASE_SERVICE_ROLE_KEY` (aquele é do projeto `fpit-sync`, este é do projeto do Diário) — ele é o que dá à function permissão de escrever em `clients`/`obras` sem estar logada como usuário.
+
+Depois de configurar e fazer o deploy, o webhook é registrado do lado do Pipefy uma única vez (mutation `createWebhook`, action `card.create`, pipe `304603301`, header `x-webhook-secret`), não precisa refazer isso a cada deploy.
+
 ## 📝 Scripts Disponíveis
 
 ```bash
