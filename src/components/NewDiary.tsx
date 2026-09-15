@@ -1848,20 +1848,14 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Cidade *
                   </label>
-                  <select
-                    value={enderecoDetalhado.cidadeId}
-                    onChange={(e) => handleEnderecoChange('cidadeId', Number(e.target.value))}
-                    disabled={enderecoDetalhado.estadoId === 0}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  <input
+                    type="text"
+                    value={enderecoDetalhado.cidadeNomeLivre}
+                    onChange={(e) => handleEnderecoChange('cidadeNomeLivre', e.target.value)}
+                    placeholder="Ex: Ouro Preto"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                     required
-                  >
-                    <option value={0}>Selecione a cidade</option>
-                    {cidades.map((cidade) => (
-                      <option key={cidade.id} value={cidade.id}>
-                        {cidade.nome}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>
