@@ -32,7 +32,11 @@ const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [editDiaryId, setEditDiaryId] = useState<string | null>(null);
-  const [showSplash, setShowSplash] = useState(true);
+  const isDedicatedPlannerPage = useMemo(
+    () => new URLSearchParams(window.location.search).get('malao') === '1',
+    []
+  );
+  const [showSplash, setShowSplash] = useState(!isDedicatedPlannerPage);
   const isPWA = useIsPWA();
   const signatureToken = useMemo(
     () => new URLSearchParams(window.location.search).get('assinar')?.trim() || '',
@@ -56,7 +60,7 @@ const AppContent: React.FC = () => {
 
   // Intro cinematográfica: apenas na área admin (interna), uma vez por sessão.
   // ?introPreview=1 força replay.
-  const isAdminArea = !isClientPortalPage && !isPublicSignaturePage && !isPublicChecklistPage && !isPublicSurveyPage;
+  const isAdminArea = !isDedicatedPlannerPage && !isClientPortalPage && !isPublicSignaturePage && !isPublicChecklistPage && !isPublicSurveyPage;
   const [showIntro, setShowIntro] = useState(() => {
     if (!isAdminArea) return false;
     const forceIntro = new URLSearchParams(window.location.search).get('introPreview') === '1';
@@ -71,7 +75,7 @@ const AppContent: React.FC = () => {
 
   // Mostrar splash screen apenas na primeira vez e se for PWA ou mobile
   useEffect(() => {
-    if (isPublicSignaturePage || isClientPortalPage || isPublicChecklistPage || isPublicSurveyPage) {
+    if (isDedicatedPlannerPage || isPublicSignaturePage || isClientPortalPage || isPublicChecklistPage || isPublicSurveyPage) {
       setShowSplash(false);
       return;
     }
@@ -88,7 +92,19 @@ const AppContent: React.FC = () => {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [isPWA, isPublicSignaturePage]);
+  }, [isPWA, isDedicatedPlannerPage, isPublicSignaturePage, isClientPortalPage, isPublicChecklistPage, isPublicSurveyPage]);
+
+  const handlePageChange = useCallback((page: string) => {
+    if (page === 'asset-planner') {
+      const plannerUrl = new URL(window.location.href);
+      plannerUrl.search = '';
+      plannerUrl.hash = '';
+      plannerUrl.searchParams.set('malao', '1');
+      window.open(plannerUrl.toString(), '_blank', 'noopener,noreferrer');
+      return;
+    }
+    setCurrentPage(page);
+  }, []);
 
   if (isClientPortalPage) {
     return <ClientPortal />;
@@ -129,10 +145,26 @@ const AppContent: React.FC = () => {
     return <LoginPage />;
   }
 
+  if (isDedicatedPlannerPage) {
+    if (user.role !== 'admin') {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6 text-center dark:bg-gray-950">
+          <p className="text-sm text-gray-600 dark:text-gray-300">Acesso ao Malão Geoteste restrito a administradores.</p>
+        </div>
+      );
+    }
+
+    return (
+      <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Carregando Malão Geoteste...</div>}>
+        <AssetPlanner dedicated />
+      </React.Suspense>
+    );
+  }
+
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onPageChange={setCurrentPage} />;
+        return <Dashboard onPageChange={handlePageChange} />;
       case 'diaries':
         return (
           <DiariesList
@@ -148,32 +180,32 @@ const AppContent: React.FC = () => {
           />
         );
       case 'clients':
-        return user.role === 'admin' ? <ClientsManagement /> : <Dashboard onPageChange={setCurrentPage} />;
+        return user.role === 'admin' ? <ClientsManagement /> : <Dashboard onPageChange={handlePageChange} />;
       case 'users':
         return <UsersManagement />;
       case 'equipment':
-        return user.role === 'admin' ? <EquipmentCatalog /> : <Dashboard onPageChange={setCurrentPage} />;
+        return user.role === 'admin' ? <EquipmentCatalog /> : <Dashboard onPageChange={handlePageChange} />;
       case 'portal':
-        return user.role === 'admin' ? <PortalManagement /> : <Dashboard onPageChange={setCurrentPage} />;
+        return user.role === 'admin' ? <PortalManagement /> : <Dashboard onPageChange={handlePageChange} />;
       case 'surveys':
-        return user.role === 'admin' ? <SatisfactionSurveys /> : <Dashboard onPageChange={setCurrentPage} />;
+        return user.role === 'admin' ? <SatisfactionSurveys /> : <Dashboard onPageChange={handlePageChange} />;
       case 'pit-ensaios':
-        return user.role === 'admin' ? <PitEnsaiosPanel /> : <Dashboard onPageChange={setCurrentPage} />;
+        return user.role === 'admin' ? <PitEnsaiosPanel /> : <Dashboard onPageChange={handlePageChange} />;
       case 'asset-planner':
         return user.role === 'admin' ? (
           <React.Suspense fallback={<div className="py-12 text-center text-sm text-gray-500">Carregando planejamento...</div>}>
             <AssetPlanner />
           </React.Suspense>
-        ) : <Dashboard onPageChange={setCurrentPage} />;
+        ) : <Dashboard onPageChange={handlePageChange} />;
       case 'profile':
         return <ProfilePage />;
       default:
-        return <Dashboard onPageChange={setCurrentPage} />;
+        return <Dashboard onPageChange={handlePageChange} />;
     }
   };
 
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
+    <Layout currentPage={currentPage} onPageChange={handlePageChange}>
       {renderPage()}
       {currentPage === 'new-diary' ? <DiaryHelp /> : currentPage !== 'asset-planner' ? <AgentAssistant /> : null}
       <InstallPWA />

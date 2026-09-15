@@ -204,7 +204,11 @@ const DENSITY_META: Record<BoardDensity, { label: string; icon: ReactNode }> = {
   },
 };
 
-export function AssetPlanner() {
+type AssetPlannerProps = {
+  dedicated?: boolean;
+};
+
+export function AssetPlanner({ dedicated = false }: AssetPlannerProps) {
   const { user } = useAuth();
   const [categories, setCategories] = useState<ItemCategory[]>(initialCategories);
   const [items, setItems] = useState<BoardItem[]>(initialItems);
@@ -1317,7 +1321,11 @@ export function AssetPlanner() {
   }
 
   return (
-    <div className="asset-planner flex h-[calc(100dvh-4.5rem)] min-h-[640px] w-full flex-col overflow-hidden bg-background text-foreground md:rounded-xl md:border">
+    <div className={`asset-planner flex w-full flex-col overflow-hidden bg-background text-foreground ${
+      dedicated
+        ? 'h-[100dvh] min-h-[640px]'
+        : 'h-[calc(100dvh-4.5rem)] min-h-[640px] md:rounded-xl md:border'
+    }`}>
       <Toaster richColors position="top-right" />
       <StockAllocationDialog
         item={pendingStockItem}
