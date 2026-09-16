@@ -166,6 +166,14 @@ SUPABASE_SERVICE_ROLE_KEY=<service role do PRÓPRIO projeto do Diário>
 
 Depois de configurar e fazer o deploy, o webhook é registrado do lado do Pipefy uma única vez (mutation `createWebhook`, action `card.create`, pipe `304603301`, header `x-webhook-secret`), não precisa refazer isso a cada deploy.
 
+## Propostas comerciais (autopreenchimento do PDF)
+
+A aba **Propostas** lê o PDF padrão de proposta comercial da Geoteste (capa + "Dados Iniciais" + tabela de orçamento + condições de pagamento) e autopreenche o formulário — cliente, CNPJ, obra, endereço, modalidade (PIT/PDA/PCE/PLACA/HAMMER), itens do orçamento, valor total, condições de pagamento etc. O admin sempre revisa/edita antes de salvar, já que a extração é por rótulo de texto (não é 100% garantida em modelos muito fora do padrão).
+
+A extração roda na Netlify Function `parse-proposta-pdf` (usa `pdfjs-dist` no modo "legacy", só lê texto, não renderiza páginas — não precisa de credencial nenhuma). O dashboard da própria aba calcula, a partir das propostas salvas: valor enviado por modalidade, taxa de conversão (aceitas/decididas) por modalidade, filtro por período (hoje/7 dias/30 dias/tudo) e por cidade.
+
+Rode `banco de dados/create_propostas.sql` uma vez no SQL Editor do Supabase antes de usar essa aba.
+
 ## 📝 Scripts Disponíveis
 
 ```bash

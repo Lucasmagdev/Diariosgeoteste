@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star, Radio, Package, HardHat } from 'lucide-react';
+import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star, Radio, Package, HardHat, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomNav } from './BottomNav';
 
@@ -41,6 +41,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     { key: 'equipment', label: 'Equipamentos', icon: Map },
     { key: 'clients', label: 'Clientes', icon: Building2 },
     { key: 'obras', label: 'Obras', icon: HardHat },
+    { key: 'propostas', label: 'Propostas', icon: FileSpreadsheet },
     { key: 'portal', label: 'Portal do Cliente', icon: Globe },
     { key: 'surveys', label: 'Pesquisas', icon: Star },
     { key: 'pit-ensaios', label: 'Ensaios PIT', icon: Radio },
@@ -56,6 +57,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     users: 'Usuários',
     clients: 'Clientes',
     obras: 'Obras',
+    propostas: 'Propostas',
     portal: 'Portal do Cliente',
     surveys: 'Pesquisas',
     'pit-ensaios': 'Ensaios PIT',
