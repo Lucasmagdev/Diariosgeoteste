@@ -100,6 +100,8 @@ const currency = (value: number | null | undefined) =>
 
 const statusLabels: Record<Status, string> = { enviada: 'Enviada', aceita: 'Aceita', recusada: 'Recusada' };
 const statusVariants: Record<Status, 'info' | 'success' | 'danger'> = { enviada: 'info', aceita: 'success', recusada: 'danger' };
+const statusBarColor: Record<Status, string> = { enviada: 'bg-blue-500', aceita: 'bg-emerald-500', recusada: 'bg-red-500' };
+const modalidadeBarColor: Record<Modalidade, string> = { PIT: 'bg-teal-500', PDA: 'bg-indigo-500', PCE: 'bg-amber-500', PLACA: 'bg-pink-500', HAMMER: 'bg-purple-500' };
 
 const periodoSince = (periodo: Periodo): Date | null => {
   const now = new Date();
@@ -230,6 +232,15 @@ export const PropostasManagement: React.FC = () => {
     const valorAceito = aceitas.reduce((sum, p) => sum + p.valorTotal, 0);
     return { modalidade: mod, total: items.length, valorEnviado, valorAceito, taxaConversao, aceitas: aceitas.length };
   }), [filteredForCards]);
+
+  const statusBreakdown = useMemo(() => {
+    const total = filteredForCards.length;
+    return (['enviada', 'aceita', 'recusada'] as Status[]).map((s) => ({
+      status: s,
+      count: filteredForCards.filter((p) => p.status === s).length,
+      pct: total > 0 ? (filteredForCards.filter((p) => p.status === s).length / total) * 100 : 0,
+    }));
+  }, [filteredForCards]);
 
   const resetForm = () => { setForm(emptyForm); setItens([]); };
 
@@ -516,6 +527,48 @@ export const PropostasManagement: React.FC = () => {
           </Surface>
         ))}
       </div>
+
+      {cardsPorModalidade.some((c) => c.total > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <Surface>
+            <div className="p-4">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Valor enviado por modalidade</p>
+              <div className="space-y-2">
+                {cardsPorModalidade.filter((c) => c.total > 0).map((c) => {
+                  const max = Math.max(...cardsPorModalidade.map((x) => x.valorEnviado), 1);
+                  const pct = (c.valorEnviado / max) * 100;
+                  return (
+                    <div key={c.modalidade} className="flex items-center gap-3">
+                      <span className="w-14 text-xs font-semibold text-gray-700 dark:text-gray-200">{c.modalidade}</span>
+                      <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div className={`h-full ${modalidadeBarColor[c.modalidade]}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="w-24 text-right text-xs text-gray-600 dark:text-gray-300">{currency(c.valorEnviado)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Surface>
+
+          <Surface>
+            <div className="p-4">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Propostas por status</p>
+              <div className="space-y-2">
+                {statusBreakdown.map((s) => (
+                  <div key={s.status} className="flex items-center gap-3">
+                    <span className="w-16 text-xs font-semibold text-gray-700 dark:text-gray-200">{statusLabels[s.status]}</span>
+                    <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <div className={`h-full ${statusBarColor[s.status]}`} style={{ width: `${s.pct}%` }} />
+                    </div>
+                    <span className="w-20 text-right text-xs text-gray-600 dark:text-gray-300">{s.count} ({s.pct.toFixed(0)}%)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Surface>
+        </div>
+      )}
 
       <div className="space-y-3">
         {filteredForList.map((p) => (
