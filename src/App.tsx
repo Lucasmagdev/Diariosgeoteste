@@ -8,9 +8,7 @@ import { DiariesList } from './components/DiariesList';
 import { NewDiary } from './components/NewDiary';
 import { ClientsManagement } from './components/ClientsManagement';
 import { ObrasManagement } from './components/ObrasManagement';
-import { PropostasManagement } from './components/PropostasManagement';
-import { ConcorrenciaManagement } from './components/ConcorrenciaManagement';
-import { LicitacoesManagement } from './components/LicitacoesManagement';
+import { ComercialManagement } from './components/ComercialManagement';
 import { VisitasTecnicasManagement } from './components/VisitasTecnicasManagement';
 import { AcompanhamentoObraManagement } from './components/AcompanhamentoObraManagement';
 import { UsersManagement } from './components/UsersManagement';
@@ -189,12 +187,8 @@ const AppContent: React.FC = () => {
         return user.role === 'admin' ? <ClientsManagement /> : <Dashboard onPageChange={handlePageChange} />;
       case 'obras':
         return user.role === 'admin' ? <ObrasManagement /> : <Dashboard onPageChange={handlePageChange} />;
-      case 'propostas':
-        return user.role === 'admin' ? <PropostasManagement /> : <Dashboard onPageChange={handlePageChange} />;
-      case 'concorrencia':
-        return user.role === 'admin' ? <ConcorrenciaManagement /> : <Dashboard onPageChange={handlePageChange} />;
-      case 'licitacoes':
-        return user.role === 'admin' ? <LicitacoesManagement /> : <Dashboard onPageChange={handlePageChange} />;
+      case 'comercial':
+        return user.role === 'admin' ? <ComercialManagement /> : <Dashboard onPageChange={handlePageChange} />;
       case 'visitas-tecnicas':
         return user.role === 'admin' ? <VisitasTecnicasManagement /> : <Dashboard onPageChange={handlePageChange} />;
       case 'acompanhamento-obra':
