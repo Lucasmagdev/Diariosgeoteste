@@ -41,20 +41,32 @@ const pipefyQuery = async (apiToken, query) => {
   return payload.data;
 };
 
-const fieldValue = (fields, fieldId) => {
+// Campo de texto/numero: le "value" (string simples, ou JSON de array
+// pra campos que o Pipefy sempre encapsula assim). NUNCA use isto pra
+// campo tipo "connector" achando que pega o nome do registro linkado —
+// "value" ali e so o rotulo de exibicao cacheado, pode ficar
+// desatualizado; o id de verdade fica em array_value (ver
+// fieldConnectorId abaixo). Bug real que pegou nessa integracao: usar
+// array_value pra tudo fazia "Empresa" virar o ID do registro do
+// Pipefy ("1067933774") em vez do nome ("TELMEC ENGENHARIA").
+const fieldDisplayValue = (fields, fieldId) => {
   const field = (fields || []).find((f) => f.field?.id === fieldId);
-  if (!field) return null;
-  if (Array.isArray(field.array_value) && field.array_value.length > 0) return field.array_value[0];
-  if (typeof field.value === 'string') {
-    try {
-      const parsed = JSON.parse(field.value);
-      if (Array.isArray(parsed)) return parsed[0] ?? null;
-    } catch {
-      // valor simples, nao json
-    }
-    return field.value;
+  if (!field || typeof field.value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(field.value);
+    if (Array.isArray(parsed)) return parsed[0] ?? null;
+  } catch {
+    // valor simples, nao json — cai pro return abaixo
   }
-  return null;
+  return field.value;
+};
+
+// Campo "connector": array_value traz o id do card/registro linkado —
+// e o que precisamos pra buscar o card mestre em outra chamada.
+const fieldConnectorId = (fields, fieldId) => {
+  const field = (fields || []).find((f) => f.field?.id === fieldId);
+  if (!field || !Array.isArray(field.array_value) || field.array_value.length === 0) return null;
+  return field.array_value[0];
 };
 
 const supabaseAdminInsert = async (baseUrl, serviceKey, table, row, select = 'id') => {
@@ -129,8 +141,8 @@ export default async (request) => {
     const cardFields = cardData?.card?.fields;
     if (!cardFields) return json({ error: 'Card não encontrado no Pipefy.' }, 404);
 
-    const nomeObra = fieldValue(cardFields, 'nome_do_cliente'); // label real: "Nome da Obra"
-    const masterCardId = fieldValue(cardFields, 'obra_fechada');
+    const nomeObra = fieldDisplayValue(cardFields, 'nome_do_cliente'); // label real: "Nome da Obra"
+    const masterCardId = fieldConnectorId(cardFields, 'obra_fechada');
     if (!nomeObra || !masterCardId) {
       return json({ error: 'Card sem "Nome da Obra" ou sem vínculo "Obra Fechada".' }, 422);
     }
@@ -142,9 +154,9 @@ export default async (request) => {
       }
     }`);
     const masterFields = masterData?.card?.fields;
-    const obraCodeRaw = fieldValue(masterFields, 'n_mero_da_obra');
+    const obraCodeRaw = fieldDisplayValue(masterFields, 'n_mero_da_obra');
     const obraCode = obraCodeRaw ? String(obraCodeRaw).trim() : null;
-    const empresaNome = fieldValue(masterFields, 'empresa');
+    const empresaNome = fieldDisplayValue(masterFields, 'empresa');
     if (!empresaNome) {
       return json({ error: 'Não foi possível resolver a empresa (cliente) do card mestre.' }, 422);
     }
