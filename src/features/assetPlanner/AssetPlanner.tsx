@@ -220,6 +220,31 @@ export function AssetPlanner({ dedicated = false }: AssetPlannerProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<BoardItem | null>(null);
   const [overRowId, setOverRowId] = useState<string | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+  activeIdRef.current = activeId;
+
+  // Watchdog: se o pointerup nativo acontecer sem o onDragEnd/onDragCancel
+  // do dnd-kit rodar (acontece quando um clique abre um modal no meio do
+  // gesto de arrastar — o Dialog assume o pointer capture e o dnd-kit
+  // nunca recebe o "solta"), o DragOverlay fica preso pra sempre por cima
+  // de tudo, inclusive do modal que acabou de abrir. Isso limpa sozinho.
+  // No caminho normal (drop de verdade) so duplica o que handleDragEnd ja
+  // fez, sem efeito colateral — activeId so controla o ghost visual.
+  useEffect(() => {
+    if (!activeId) return;
+    const draggedId = activeId;
+    const clearIfStuck = () => {
+      // so mexe se ainda for o mesmo drag — se um novo ja comecou, deixa quieto
+      setActiveId((current) => (current === draggedId ? null : current));
+      setActiveItem((current) => (activeIdRef.current === draggedId ? null : current));
+    };
+    window.addEventListener("pointerup", clearIfStuck, { once: true });
+    window.addEventListener("pointercancel", clearIfStuck, { once: true });
+    return () => {
+      window.removeEventListener("pointerup", clearIfStuck);
+      window.removeEventListener("pointercancel", clearIfStuck);
+    };
+  }, [activeId]);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BoardItem | null>(null);
@@ -1532,6 +1557,7 @@ export function AssetPlanner({ dedicated = false }: AssetPlannerProps) {
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragEnd}
           >
             <div className="flex flex-1 overflow-hidden">
               <PaletteSidebar
