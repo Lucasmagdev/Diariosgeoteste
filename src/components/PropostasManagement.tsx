@@ -8,7 +8,7 @@ import EmptyState from './EmptyState';
 import FormInput from './FormInput';
 import FormTextarea from './FormTextarea';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
+import { DonutChart, FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
 import { ObraSelector, ObraOption } from './ObraSelector';
 import { Periodo, periodoSince, regiaoPorUf } from '../lib/periodoFiltro';
 
@@ -100,7 +100,7 @@ const currency = (value: number | null | undefined) =>
 
 const statusLabels: Record<Status, string> = { enviada: 'Enviada', aceita: 'Aceita', recusada: 'Recusada' };
 const statusVariants: Record<Status, 'info' | 'success' | 'danger'> = { enviada: 'info', aceita: 'success', recusada: 'danger' };
-const statusBarColor: Record<Status, string> = { enviada: 'bg-blue-500', aceita: 'bg-emerald-500', recusada: 'bg-red-500' };
+const statusHex: Record<Status, string> = { enviada: '#3b82f6', aceita: '#10b981', recusada: '#ef4444' };
 const modalidadeBarColor: Record<Modalidade, string> = { PIT: 'bg-teal-500', PDA: 'bg-indigo-500', PCE: 'bg-amber-500', PLACA: 'bg-pink-500', HAMMER: 'bg-purple-500' };
 
 const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
@@ -578,17 +578,9 @@ export const PropostasManagement: React.FC = () => {
           <Surface>
             <div className="p-4">
               <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Propostas por status</p>
-              <div className="space-y-2">
-                {statusBreakdown.map((s) => (
-                  <div key={s.status} className="flex items-center gap-3">
-                    <span className="w-16 text-xs font-semibold text-gray-700 dark:text-gray-200">{statusLabels[s.status]}</span>
-                    <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                      <div className={`h-full ${statusBarColor[s.status]}`} style={{ width: `${s.pct}%` }} />
-                    </div>
-                    <span className="w-20 text-right text-xs text-gray-600 dark:text-gray-300">{s.count} ({s.pct.toFixed(0)}%)</span>
-                  </div>
-                ))}
-              </div>
+              <DonutChart
+                data={statusBreakdown.map((s) => ({ label: statusLabels[s.status], value: s.count, hex: statusHex[s.status] }))}
+              />
             </div>
           </Surface>
         </div>

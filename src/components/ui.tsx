@@ -4,6 +4,57 @@ import { PERIODOS, PERIODO_LABELS, Periodo } from '../lib/periodoFiltro';
 
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
 
+export interface DonutSlice {
+  label: string;
+  value: number;
+  hex: string;
+}
+
+// Donut via conic-gradient puro (sem lib de grafico) — serve pra
+// perguntas de "composicao do todo" (ex: % de propostas por status),
+// diferente da barra proporcional, que serve pra comparar magnitude
+// entre categorias.
+export const DonutChart: React.FC<{ data: DonutSlice[]; size?: number; thickness?: number }> = ({ data, size = 120, thickness = 18 }) => {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  let acc = 0;
+  const stops = data.filter((d) => d.value > 0).map((d) => {
+    const start = total > 0 ? (acc / total) * 360 : 0;
+    acc += d.value;
+    const end = total > 0 ? (acc / total) * 360 : 0;
+    return `${d.hex} ${start}deg ${end}deg`;
+  });
+  const gradient = stops.length > 0 ? `conic-gradient(${stops.join(', ')})` : null;
+
+  return (
+    <div className="flex items-center gap-4">
+      <div
+        className="rounded-full flex-shrink-0 flex items-center justify-center"
+        style={{
+          width: size,
+          height: size,
+          background: gradient || 'conic-gradient(#e5e7eb 0deg 360deg)',
+        }}
+      >
+        <div
+          className="rounded-full bg-white dark:bg-gray-900 flex items-center justify-center"
+          style={{ width: size - thickness * 2, height: size - thickness * 2 }}
+        >
+          <span className="text-sm font-semibold text-gray-900 dark:text-white">{total}</span>
+        </div>
+      </div>
+      <div className="space-y-1.5 min-w-0">
+        {data.map((d) => (
+          <div key={d.label} className="flex items-center gap-2 text-xs">
+            <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.hex }} />
+            <span className="text-gray-700 dark:text-gray-200 truncate">{d.label}</span>
+            <span className="text-gray-400 flex-shrink-0">{total > 0 ? `${((d.value / total) * 100).toFixed(0)}%` : '0%'}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const PeriodoFilterButtons: React.FC<{ value: Periodo; onChange: (p: Periodo) => void }> = ({ value, onChange }) => (
   <div className="flex rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden text-sm">
     {PERIODOS.map((p) => (
