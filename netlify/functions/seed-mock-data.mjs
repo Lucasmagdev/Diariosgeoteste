@@ -36,6 +36,13 @@ export default async (request) => {
   if (!supabaseUrl || !serviceKey) return json({ error: 'Sem credenciais no servidor.' }, 503);
 
   try {
+    const propostaKeys = ['numero', 'modalidade', 'cliente_nome', 'cidade', 'uf', 'valor_total', 'status', 'data_proposta', 'obra_nome', 'motivo_recusa', 'concorrentes', 'eh_licitacao', 'orgao_licitante', 'numero_processo', 'data_abertura'];
+    const normalizeProposta = (p) => {
+      const full = { motivo_recusa: null, concorrentes: null, eh_licitacao: false, orgao_licitante: null, numero_processo: null, data_abertura: null, ...p };
+      const ordered = {};
+      propostaKeys.forEach((k) => { ordered[k] = full[k]; });
+      return ordered;
+    };
     const propostas = [
       { numero: 'PROP-0001', modalidade: 'PIT', cliente_nome: 'Construtora Alfa', cidade: 'Belo Horizonte', uf: 'MG', valor_total: 45000, status: 'aceita', data_proposta: '2026-09-14', obra_nome: 'Residencial Alfa Park' },
       { numero: 'PROP-0002', modalidade: 'PDA', cliente_nome: 'Vale Engenharia', cidade: 'Rio de Janeiro', uf: 'RJ', valor_total: 128000, status: 'enviada', data_proposta: '2026-09-11', obra_nome: 'Terminal Portuário Vale', concorrentes: 'GeoSolo Engenharia, Fundatec' },
@@ -49,7 +56,7 @@ export default async (request) => {
       { numero: 'PROP-0010', modalidade: 'PDA', cliente_nome: 'Prefeitura de Contagem', cidade: 'Contagem', uf: 'MG', valor_total: 156000, status: 'enviada', data_proposta: '2026-09-08', obra_nome: 'Viaduto Municipal Contagem', eh_licitacao: true, orgao_licitante: 'Prefeitura Municipal de Contagem', numero_processo: 'PMC-034/2026', data_abertura: '2026-10-06' },
       { numero: 'PROP-0011', modalidade: 'PIT', cliente_nome: 'Construtora ETAM', cidade: 'Manaus', uf: 'AM', valor_total: 41000, status: 'aceita', data_proposta: '2026-08-07', obra_nome: 'Ponte Rio Autaz Mirim' },
       { numero: 'PROP-0012', modalidade: 'HAMMER', cliente_nome: 'Vale S.A.', cidade: 'Belo Horizonte', uf: 'MG', valor_total: 175000, status: 'enviada', data_proposta: '2026-09-12', obra_nome: 'Mina Vale - Expansão', concorrentes: 'Cesa Engenharia, PDI Brasil' },
-    ];
+    ].map(normalizeProposta);
     const propostasInseridas = await sb(supabaseUrl, serviceKey, 'propostas', {
       method: 'POST',
       body: JSON.stringify(propostas),
