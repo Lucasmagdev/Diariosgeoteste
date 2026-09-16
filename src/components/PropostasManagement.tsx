@@ -52,6 +52,11 @@ interface Proposta {
   motivoRecusa: string | null;
   itens: PropostaItem[];
   arquivoNome: string | null;
+  ehLicitacao: boolean;
+  concorrentes: string | null;
+  orgaoLicitante: string | null;
+  numeroProcesso: string | null;
+  dataAbertura: string | null;
   createdAt: string;
 }
 
@@ -81,6 +86,11 @@ const emptyForm = {
   status: 'enviada' as Status,
   motivoRecusa: '',
   arquivoNome: '',
+  ehLicitacao: false,
+  concorrentes: '',
+  orgaoLicitante: '',
+  numeroProcesso: '',
+  dataAbertura: '',
 };
 
 type FormState = typeof emptyForm;
@@ -155,6 +165,11 @@ export const PropostasManagement: React.FC = () => {
     motivoRecusa: row.motivo_recusa || null,
     itens: Array.isArray(row.itens) ? row.itens : [],
     arquivoNome: row.arquivo_nome || null,
+    ehLicitacao: Boolean(row.eh_licitacao),
+    concorrentes: row.concorrentes || null,
+    orgaoLicitante: row.orgao_licitante || null,
+    numeroProcesso: row.numero_processo || null,
+    dataAbertura: row.data_abertura || null,
     createdAt: row.created_at || new Date().toISOString(),
   });
 
@@ -248,6 +263,11 @@ export const PropostasManagement: React.FC = () => {
       status: p.status,
       motivoRecusa: p.motivoRecusa || '',
       arquivoNome: p.arquivoNome || '',
+      ehLicitacao: p.ehLicitacao,
+      concorrentes: p.concorrentes || '',
+      orgaoLicitante: p.orgaoLicitante || '',
+      numeroProcesso: p.numeroProcesso || '',
+      dataAbertura: p.dataAbertura || '',
     });
     setItens(p.itens);
     setShowModal(true);
@@ -350,6 +370,11 @@ export const PropostasManagement: React.FC = () => {
       motivo_recusa: form.status === 'recusada' ? (form.motivoRecusa.trim() || null) : null,
       itens,
       arquivo_nome: form.arquivoNome.trim() || null,
+      eh_licitacao: form.ehLicitacao,
+      concorrentes: form.concorrentes.trim() || null,
+      orgao_licitante: form.ehLicitacao ? (form.orgaoLicitante.trim() || null) : null,
+      numero_processo: form.ehLicitacao ? (form.numeroProcesso.trim() || null) : null,
+      data_abertura: form.ehLicitacao ? (form.dataAbertura || null) : null,
     };
 
     try {
@@ -501,6 +526,8 @@ export const PropostasManagement: React.FC = () => {
                   <span className="font-semibold text-gray-900 dark:text-white">{p.numero || 'Sem número'}{p.revisao ? ` — ${p.revisao}` : ''}</span>
                   <StatusBadge variant="neutral">{p.modalidade}</StatusBadge>
                   <StatusBadge variant={statusVariants[p.status]}>{statusLabels[p.status]}</StatusBadge>
+                  {p.ehLicitacao && <StatusBadge variant="warning">Licitação</StatusBadge>}
+                  {p.concorrentes && <StatusBadge variant="info">Concorrência</StatusBadge>}
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-200 truncate">{p.clienteNome}{p.obraNome ? ` · ${p.obraNome}` : ''}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{[p.cidade, p.uf].filter(Boolean).join('/')} {p.dataProposta ? `· ${new Date(p.dataProposta + 'T00:00:00').toLocaleDateString('pt-BR')}` : ''}</p>
@@ -630,6 +657,21 @@ export const PropostasManagement: React.FC = () => {
             <FormInput label="Periodicidade de medição" type="text" value={form.periodicidadeMedicao} onChange={(e) => setForm((f) => ({ ...f, periodicidadeMedicao: e.target.value }))} placeholder="semanais" />
             <FormInput label="Prazo de pagamento (dias)" type="number" value={form.prazoPagamentoDias} onChange={(e) => setForm((f) => ({ ...f, prazoPagamentoDias: e.target.value }))} />
             <FormInput label="Data da proposta" type="date" value={form.dataProposta} onChange={(e) => setForm((f) => ({ ...f, dataProposta: e.target.value }))} />
+          </div>
+
+          <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 space-y-3">
+            <FormInput label="Concorrentes nessa obra (opcional)" type="text" value={form.concorrentes} onChange={(e) => setForm((f) => ({ ...f, concorrentes: e.target.value }))} placeholder="Ex: Empresa X, Empresa Y" />
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+              <input type="checkbox" checked={form.ehLicitacao} onChange={(e) => setForm((f) => ({ ...f, ehLicitacao: e.target.checked }))} className="rounded border-gray-300 dark:border-gray-700" />
+              É licitação
+            </label>
+            {form.ehLicitacao && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <FormInput label="Órgão licitante" type="text" value={form.orgaoLicitante} onChange={(e) => setForm((f) => ({ ...f, orgaoLicitante: e.target.value }))} />
+                <FormInput label="Nº do processo" type="text" value={form.numeroProcesso} onChange={(e) => setForm((f) => ({ ...f, numeroProcesso: e.target.value }))} />
+                <FormInput label="Data de abertura" type="date" value={form.dataAbertura} onChange={(e) => setForm((f) => ({ ...f, dataAbertura: e.target.value }))} />
+              </div>
+            )}
           </div>
 
           <div>

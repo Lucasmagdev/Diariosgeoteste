@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star, Radio, Package, HardHat, FileSpreadsheet } from 'lucide-react';
+import { LogOut, FileText, Users, Building2, Home, Sun, Moon, User, Menu, X, ChevronLeft, Map, Plus, Globe, Star, Radio, Package, HardHat, FileSpreadsheet, Swords, Gavel, MapPinned, ClipboardList } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomNav } from './BottomNav';
 
@@ -42,6 +42,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     { key: 'clients', label: 'Clientes', icon: Building2 },
     { key: 'obras', label: 'Obras', icon: HardHat },
     { key: 'propostas', label: 'Propostas', icon: FileSpreadsheet },
+    { key: 'concorrencia', label: 'Concorrência', icon: Swords },
+    { key: 'licitacoes', label: 'Licitações', icon: Gavel },
+    { key: 'visitas-tecnicas', label: 'Visitas Técnicas', icon: MapPinned },
+    { key: 'acompanhamento-obra', label: 'Acompanhamento de Obra', icon: ClipboardList },
     { key: 'portal', label: 'Portal do Cliente', icon: Globe },
     { key: 'surveys', label: 'Pesquisas', icon: Star },
     { key: 'pit-ensaios', label: 'Ensaios PIT', icon: Radio },
@@ -58,6 +62,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
     clients: 'Clientes',
     obras: 'Obras',
     propostas: 'Propostas',
+    concorrencia: 'Concorrência',
+    licitacoes: 'Licitações',
+    'visitas-tecnicas': 'Visitas Técnicas',
+    'acompanhamento-obra': 'Acompanhamento de Obra',
     portal: 'Portal do Cliente',
     surveys: 'Pesquisas',
     'pit-ensaios': 'Ensaios PIT',
