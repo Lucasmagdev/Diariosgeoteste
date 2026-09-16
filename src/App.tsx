@@ -7,6 +7,7 @@ import { Dashboard } from './components/Dashboard';
 import { DiariesList } from './components/DiariesList';
 import { NewDiary } from './components/NewDiary';
 import { ClientsManagement } from './components/ClientsManagement';
+import { ObrasManagement } from './components/ObrasManagement';
 import { UsersManagement } from './components/UsersManagement';
 import { ProfilePage } from './components/ProfilePage';
 import { AgentAssistant } from './components/AgentAssistant';
@@ -181,6 +182,8 @@ const AppContent: React.FC = () => {
         );
       case 'clients':
         return user.role === 'admin' ? <ClientsManagement /> : <Dashboard onPageChange={handlePageChange} />;
+      case 'obras':
+        return user.role === 'admin' ? <ObrasManagement /> : <Dashboard onPageChange={handlePageChange} />;
       case 'users':
         return <UsersManagement />;
       case 'equipment':

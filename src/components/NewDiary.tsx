@@ -8,6 +8,7 @@ import { PLACAForm, PLACAFormData } from './PLACAForm';
 import { PDAForm, PDAFormData } from './PDAForm';
 import { PDADiaryForm, PDADiaryFormData } from './PDADiaryForm';
 import { ClientSelector } from './ClientSelector';
+import { ObraSelector } from './ObraSelector';
 import { getEstados, getEstadoById, getCidadeById } from '../data/estadosCidades';
 import { formatTime24hOrEmpty, maskTimeInput, normalizeTimeInput } from '../utils/time';
 
@@ -190,7 +191,7 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [equipamentos, setEquipamentos] = useState<{ id: string; tipo: string; nome: string }[]>([]);
-  const [obras, setObras] = useState<{ id: string; obraCode: string | null; name: string; clientId: string | null }[]>([]);
+  const [obras, setObras] = useState<{ id: string; obraCode: string | null; name: string; clientId: string | null; clientName: string | null }[]>([]);
   const [obraId, setObraId] = useState('');
   const diaryTypeOptions = ['PCE', 'PLACA', 'PIT', 'PDA', 'PDA_DIARIO'] as const;
   type DiaryType = typeof diaryTypeOptions[number];
@@ -266,10 +267,16 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
         // Buscar obras cadastradas (pra vincular o diario a obra certa)
         const { data: obrasData, error: obrasError } = await supabase
           .from('obras')
-          .select('id, obra_code, name, client_id')
+          .select('id, obra_code, name, client_id, clients(name)')
           .order('name');
         if (!obrasError && obrasData) {
-          setObras(obrasData.map((o: any) => ({ id: o.id, obraCode: o.obra_code, name: o.name, clientId: o.client_id })));
+          setObras(obrasData.map((o: any) => ({
+            id: o.id,
+            obraCode: o.obra_code,
+            name: o.name,
+            clientId: o.client_id,
+            clientName: o.clients?.name || null,
+          })));
         }
 
         // Buscar todos os usuários para formar a equipe
@@ -1293,6 +1300,26 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                   </div>
                 ) : (
                   <>
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Obra (busque pelo código, ex: G2561)
+                      </label>
+                      <ObraSelector
+                        obras={obras}
+                        value={obraId}
+                        onChange={(obra) => {
+                          setObraId(obra?.id || '');
+                          if (obra) {
+                            const linkedClient = clients.find((c) => c.id === obra.clientId);
+                            if (linkedClient) handleChange('clientName', linkedClient.name);
+                          }
+                        }}
+                        loading={loadingClients}
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Selecionar a obra já preenche o cliente abaixo.
+                      </p>
+                    </div>
                     <ClientSelector
                       clients={clients}
                       value={formData.clientName}
@@ -1305,26 +1332,6 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                         Nenhum cliente cadastrado. {user?.role === 'admin' && 'Cadastre clientes na seção "Clientes".'}
                       </p>
                     )}
-                    {(() => {
-                      const clienteAtual = clients.find((c) => c.name === formData.clientName);
-                      const obrasDoCliente = clienteAtual ? obras.filter((o) => o.clientId === clienteAtual.id) : [];
-                      if (obrasDoCliente.length === 0) return null;
-                      return (
-                        <div className="mt-3">
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Obra (opcional)</label>
-                          <select
-                            value={obraId}
-                            onChange={(e) => setObraId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                          >
-                            <option value="">Sem obra vinculada</option>
-                            {obrasDoCliente.map((o) => (
-                              <option key={o.id} value={o.id}>{o.obraCode ? `${o.obraCode} — ${o.name}` : o.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })()}
                   </>
                 )}
               </div>
@@ -1722,6 +1729,26 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                   </div>
                 ) : (
                   <>
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Obra (busque pelo código, ex: G2561)
+                      </label>
+                      <ObraSelector
+                        obras={obras}
+                        value={obraId}
+                        onChange={(obra) => {
+                          setObraId(obra?.id || '');
+                          if (obra) {
+                            const linkedClient = clients.find((c) => c.id === obra.clientId);
+                            if (linkedClient) handleChange('clientName', linkedClient.name);
+                          }
+                        }}
+                        loading={loadingClients}
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Selecionar a obra já preenche o cliente abaixo.
+                      </p>
+                    </div>
                     <ClientSelector
                       clients={clients}
                       value={formData.clientName}
@@ -1734,26 +1761,6 @@ export const NewDiary: React.FC<NewDiaryProps> = ({ onBack, editDiaryId }) => {
                         Nenhum cliente cadastrado. {user?.role === 'admin' && 'Cadastre clientes na seção "Clientes".'}
                       </p>
                     )}
-                    {(() => {
-                      const clienteAtual = clients.find((c) => c.name === formData.clientName);
-                      const obrasDoCliente = clienteAtual ? obras.filter((o) => o.clientId === clienteAtual.id) : [];
-                      if (obrasDoCliente.length === 0) return null;
-                      return (
-                        <div className="mt-3">
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Obra (opcional)</label>
-                          <select
-                            value={obraId}
-                            onChange={(e) => setObraId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                          >
-                            <option value="">Sem obra vinculada</option>
-                            {obrasDoCliente.map((o) => (
-                              <option key={o.id} value={o.id}>{o.obraCode ? `${o.obraCode} — ${o.name}` : o.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })()}
                   </>
                 )}
               </div>
