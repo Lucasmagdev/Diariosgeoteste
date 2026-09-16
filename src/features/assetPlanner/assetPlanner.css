@@ -1,4 +1,13 @@
-.asset-planner {
+/*
+ * Estas variaveis precisam estar em :root (nao so em .asset-planner):
+ * Dialog/AlertDialog/Select/Popover/DropdownMenu da Radix fazem portal
+ * pra fora da arvore DOM real (direto em document.body), entao um
+ * escopo em ".asset-planner" nao chega la por heranca de CSS — o
+ * resultado era bg-background/bg-popover etc caindo em oklch(<vazio>),
+ * valor invalido, sem cor de fundo nenhuma: o board por tras aparecia
+ * "vazando" atras de modais e menus (bug real visto em producao).
+ */
+:root {
   --ap-background: 0.985 0.006 165;
   --ap-foreground: 0.18 0.018 165;
   --ap-card: 1 0 0;
@@ -22,12 +31,9 @@
   --ap-border: 0.90 0.012 165;
   --ap-input: 0.90 0.012 165;
   --ap-ring: 0.55 0.14 165;
-  background: oklch(var(--ap-background));
-  color: oklch(var(--ap-foreground));
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
-.dark .asset-planner {
+.dark {
   --ap-background: 0.11 0.025 165;
   --ap-foreground: 0.96 0.008 165;
   --ap-card: 0.16 0.022 165;
@@ -51,6 +57,12 @@
   --ap-border: 0.32 0.018 165;
   --ap-input: 0.34 0.018 165;
   --ap-ring: 0.62 0.15 165;
+}
+
+.asset-planner {
+  background: oklch(var(--ap-background));
+  color: oklch(var(--ap-foreground));
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 .asset-planner *,
