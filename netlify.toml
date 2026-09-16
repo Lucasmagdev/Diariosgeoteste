@@ -6,6 +6,14 @@
   # Desabilitar o scanner de secrets para variáveis de ambiente conhecidas
   SECRETS_SCAN_ENABLED = "false"
 
+[functions]
+  # pdfjs-dist (usado por parse-proposta-pdf) acha seu "worker" por um
+  # caminho relativo que só existe com node_modules real ao lado — se o
+  # bundler embutir tudo num arquivo só, esse caminho quebra e todo PDF
+  # falha ("Cannot find module '.../pdf.worker.mjs'"). Mantendo esse pacote
+  # de fora do bundle, ele viaja como node_modules de verdade.
+  external_node_modules = ["pdfjs-dist"]
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
