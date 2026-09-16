@@ -7,6 +7,15 @@
 // com colunas/tabelas marcadas, entao os valores sao lidos por rotulo
 // ("Cliente:", "CNPJ:", "Validade da Proposta:" etc.), nao por posicao fixa.
 // Extracao e "melhor esforco": o admin sempre revisa/edita antes de salvar.
+// pdfjs-dist, sem worker de verdade (Node), acha o WorkerMessageHandler por
+// um import() dinamico com caminho relativo (`./pdf.worker.mjs`) resolvido
+// a partir do PROPRIO arquivo do modulo — funciona com node_modules intacto,
+// mas quebra assim que o bundler da Netlify Function junta tudo num arquivo
+// so (o caminho relativo deixa de existir). Import estatico do worker aqui
+// e registro em globalThis.pdfjsWorker faz o pdfjs-dist achar o handler
+// direto, sem precisar desse import() dinamico — funciona bundlado ou nao.
+import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+globalThis.pdfjsWorker = pdfjsWorker;
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
