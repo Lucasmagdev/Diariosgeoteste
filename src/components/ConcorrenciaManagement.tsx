@@ -3,7 +3,8 @@ import { Search, Users } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import EmptyState from './EmptyState';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { FilterBar, PageHeader, StatusBadge, Surface } from './ui';
+import { FilterBar, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
+import { Periodo, periodoSince } from '../lib/periodoFiltro';
 
 const MODALIDADES = ['PIT', 'PDA', 'PCE', 'PLACA', 'HAMMER'] as const;
 type Modalidade = typeof MODALIDADES[number];
@@ -21,6 +22,8 @@ interface PropostaConcorrencia {
   status: Status;
   ehLicitacao: boolean;
   concorrentes: string;
+  dataProposta: string | null;
+  createdAt: string;
 }
 
 const currency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -33,6 +36,7 @@ export const ConcorrenciaManagement: React.FC = () => {
   const [propostas, setPropostas] = useState<PropostaConcorrencia[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [periodo, setPeriodo] = useState<Periodo>('tudo');
 
   const fetchData = async () => {
     if (!isSupabaseConfigured) { setPropostas([]); return; }
@@ -40,7 +44,7 @@ export const ConcorrenciaManagement: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('propostas')
-        .select('id, numero, modalidade, cliente_nome, obra_nome, cidade, uf, valor_total, status, eh_licitacao, concorrentes')
+        .select('id, numero, modalidade, cliente_nome, obra_nome, cidade, uf, valor_total, status, eh_licitacao, concorrentes, data_proposta, created_at')
         .not('concorrentes', 'is', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -58,6 +62,8 @@ export const ConcorrenciaManagement: React.FC = () => {
           status: row.status,
           ehLicitacao: Boolean(row.eh_licitacao),
           concorrentes: row.concorrentes,
+          dataProposta: row.data_proposta,
+          createdAt: row.created_at,
         })));
     } catch {
       toast.error('Não foi possível carregar a concorrência. Tente novamente.');
@@ -70,12 +76,17 @@ export const ConcorrenciaManagement: React.FC = () => {
   useEffect(() => { fetchData(); }, []);
 
   const filtered = useMemo(() => propostas.filter((p) => {
+    const since = periodoSince(periodo);
+    if (since) {
+      const ref = p.dataProposta ? new Date(p.dataProposta) : new Date(p.createdAt);
+      if (ref < since) return false;
+    }
     const term = searchTerm.trim().toLowerCase();
     if (!term) return true;
     return p.clienteNome.toLowerCase().includes(term)
       || (p.obraNome || '').toLowerCase().includes(term)
       || p.concorrentes.toLowerCase().includes(term);
-  }), [propostas, searchTerm]);
+  }), [propostas, searchTerm, periodo]);
 
   const totais = useMemo(() => {
     const valorComConcorrencia = filtered.reduce((sum, p) => sum + p.valorTotal, 0);
@@ -115,6 +126,7 @@ export const ConcorrenciaManagement: React.FC = () => {
         >
           {loading ? 'Atualizando...' : 'Atualizar'}
         </button>
+        <PeriodoFilterButtons value={periodo} onChange={setPeriodo} />
       </FilterBar>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

@@ -6,8 +6,9 @@ import EmptyState from './EmptyState';
 import FormInput from './FormInput';
 import FormTextarea from './FormTextarea';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { FilterBar, IconButton, Modal, PageHeader, Surface } from './ui';
+import { FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButtons, Surface } from './ui';
 import { ObraSelector, ObraOption } from './ObraSelector';
+import { Periodo, periodoSince } from '../lib/periodoFiltro';
 
 interface Visita {
   id: string;
@@ -38,6 +39,7 @@ export const VisitasTecnicasManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [engenheiroFiltro, setEngenheiroFiltro] = useState('');
+  const [periodo, setPeriodo] = useState<Periodo>('tudo');
 
   const [showModal, setShowModal] = useState(false);
   const [editingVisita, setEditingVisita] = useState<Visita | null>(null);
@@ -83,11 +85,13 @@ export const VisitasTecnicasManagement: React.FC = () => {
   useEffect(() => { fetchVisitas(); fetchObras(); }, []);
 
   const filtered = useMemo(() => visitas.filter((v) => {
+    const since = periodoSince(periodo);
+    if (since && new Date(v.dataVisita) < since) return false;
     if (engenheiroFiltro.trim() && !v.engenheiroResponsavel.toLowerCase().includes(engenheiroFiltro.trim().toLowerCase())) return false;
     const term = searchTerm.trim().toLowerCase();
     if (!term) return true;
     return (v.obraNome || '').toLowerCase().includes(term) || v.engenheiroResponsavel.toLowerCase().includes(term);
-  }), [visitas, searchTerm, engenheiroFiltro]);
+  }), [visitas, searchTerm, engenheiroFiltro, periodo]);
 
   const porEngenheiro = useMemo(() => {
     const map = new Map<string, number>();
@@ -202,6 +206,7 @@ export const VisitasTecnicasManagement: React.FC = () => {
         <button onClick={fetchVisitas} disabled={loading} className="text-xs text-green-700 dark:text-green-300 hover:underline disabled:opacity-50">
           {loading ? 'Atualizando...' : 'Atualizar'}
         </button>
+        <PeriodoFilterButtons value={periodo} onChange={setPeriodo} />
       </FilterBar>
 
       {porEngenheiro.length > 0 && (

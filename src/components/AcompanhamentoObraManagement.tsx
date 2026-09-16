@@ -6,7 +6,8 @@ import EmptyState from './EmptyState';
 import FormInput from './FormInput';
 import FormTextarea from './FormTextarea';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { FilterBar, Modal, PageHeader, StatusBadge, Surface } from './ui';
+import { FilterBar, Modal, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
+import { Periodo, periodoSince } from '../lib/periodoFiltro';
 
 interface ObraAcompanhamento {
   id: string;
@@ -69,6 +70,7 @@ export const AcompanhamentoObraManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [prazoFiltro, setPrazoFiltro] = useState<PrazoStatus | 'todas'>('todas');
+  const [periodo, setPeriodo] = useState<Periodo>('tudo');
 
   const [selectedObra, setSelectedObra] = useState<ObraAcompanhamento | null>(null);
   const [detailForm, setDetailForm] = useState({
@@ -115,11 +117,13 @@ export const AcompanhamentoObraManagement: React.FC = () => {
   useEffect(() => { fetchObras(); }, []);
 
   const filtered = useMemo(() => obras.filter((o) => {
+    const since = periodoSince(periodo);
+    if (since && o.dataInicio && new Date(o.dataInicio) < since) return false;
     if (prazoFiltro !== 'todas' && prazoStatus(o) !== prazoFiltro) return false;
     const term = searchTerm.trim().toLowerCase();
     if (!term) return true;
     return o.name.toLowerCase().includes(term) || (o.obraCode || '').toLowerCase().includes(term) || (o.clientName || '').toLowerCase().includes(term);
-  }), [obras, searchTerm, prazoFiltro]);
+  }), [obras, searchTerm, prazoFiltro, periodo]);
 
   const openDetail = async (obra: ObraAcompanhamento) => {
     setSelectedObra(obra);
@@ -263,6 +267,7 @@ export const AcompanhamentoObraManagement: React.FC = () => {
         <button onClick={fetchObras} disabled={loading} className="text-xs text-green-700 dark:text-green-300 hover:underline disabled:opacity-50">
           {loading ? 'Atualizando...' : 'Atualizar'}
         </button>
+        <PeriodoFilterButtons value={periodo} onChange={setPeriodo} />
       </FilterBar>
 
       <div className="space-y-3">

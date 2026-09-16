@@ -8,13 +8,13 @@ import EmptyState from './EmptyState';
 import FormInput from './FormInput';
 import FormTextarea from './FormTextarea';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { FilterBar, IconButton, Modal, PageHeader, StatusBadge, Surface } from './ui';
+import { FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
 import { ObraSelector, ObraOption } from './ObraSelector';
+import { Periodo, periodoSince, regiaoPorUf } from '../lib/periodoFiltro';
 
 const MODALIDADES = ['PIT', 'PDA', 'PCE', 'PLACA', 'HAMMER'] as const;
 type Modalidade = typeof MODALIDADES[number];
 type Status = 'enviada' | 'aceita' | 'recusada';
-type Periodo = 'hoje' | 'semana' | 'mes' | 'tudo';
 
 interface PropostaItem {
   descricao: string;
@@ -102,14 +102,6 @@ const statusLabels: Record<Status, string> = { enviada: 'Enviada', aceita: 'Acei
 const statusVariants: Record<Status, 'info' | 'success' | 'danger'> = { enviada: 'info', aceita: 'success', recusada: 'danger' };
 const statusBarColor: Record<Status, string> = { enviada: 'bg-blue-500', aceita: 'bg-emerald-500', recusada: 'bg-red-500' };
 const modalidadeBarColor: Record<Modalidade, string> = { PIT: 'bg-teal-500', PDA: 'bg-indigo-500', PCE: 'bg-amber-500', PLACA: 'bg-pink-500', HAMMER: 'bg-purple-500' };
-
-const periodoSince = (periodo: Periodo): Date | null => {
-  const now = new Date();
-  if (periodo === 'hoje') return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (periodo === 'semana') { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
-  if (periodo === 'mes') { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d; }
-  return null;
-};
 
 const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -240,6 +232,49 @@ export const PropostasManagement: React.FC = () => {
       count: filteredForCards.filter((p) => p.status === s).length,
       pct: total > 0 ? (filteredForCards.filter((p) => p.status === s).length / total) * 100 : 0,
     }));
+  }, [filteredForCards]);
+
+  // Rollup geografico regiao -> estado -> cidade, do mais alto nivel pro
+  // mais granular — mesma logica que um analista usaria pra achar onde
+  // o pipeline comercial concentra e onde converte melhor.
+  const porRegiao = useMemo(() => {
+    const map = new Map<string, { valor: number; count: number; aceitas: number; decididas: number }>();
+    filteredForCards.forEach((p) => {
+      const regiao = regiaoPorUf(p.uf);
+      const entry = map.get(regiao) || { valor: 0, count: 0, aceitas: 0, decididas: 0 };
+      entry.valor += p.valorTotal;
+      entry.count += 1;
+      if (p.status === 'aceita') { entry.aceitas += 1; entry.decididas += 1; }
+      if (p.status === 'recusada') entry.decididas += 1;
+      map.set(regiao, entry);
+    });
+    return Array.from(map.entries())
+      .map(([regiao, v]) => ({ regiao, ...v, taxaConversao: v.decididas > 0 ? (v.aceitas / v.decididas) * 100 : null }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [filteredForCards]);
+
+  const porEstado = useMemo(() => {
+    const map = new Map<string, { valor: number; count: number }>();
+    filteredForCards.forEach((p) => {
+      const uf = p.uf || 'Sem estado';
+      const entry = map.get(uf) || { valor: 0, count: 0 };
+      entry.valor += p.valorTotal;
+      entry.count += 1;
+      map.set(uf, entry);
+    });
+    return Array.from(map.entries()).map(([uf, v]) => ({ uf, ...v })).sort((a, b) => b.valor - a.valor);
+  }, [filteredForCards]);
+
+  const porCidade = useMemo(() => {
+    const map = new Map<string, { valor: number; count: number }>();
+    filteredForCards.forEach((p) => {
+      const key = p.cidade ? `${p.cidade}${p.uf ? `/${p.uf}` : ''}` : 'Sem cidade';
+      const entry = map.get(key) || { valor: 0, count: 0 };
+      entry.valor += p.valorTotal;
+      entry.count += 1;
+      map.set(key, entry);
+    });
+    return Array.from(map.entries()).map(([cidade, v]) => ({ cidade, ...v })).sort((a, b) => b.valor - a.valor).slice(0, 8);
   }, [filteredForCards]);
 
   const resetForm = () => { setForm(emptyForm); setItens([]); };
@@ -493,18 +528,7 @@ export const PropostasManagement: React.FC = () => {
           >
             {loading ? 'Atualizando...' : 'Atualizar'}
           </button>
-          <div className="flex rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden text-sm">
-            {(['hoje', 'semana', 'mes', 'tudo'] as Periodo[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPeriodo(p)}
-                className={`px-3 py-2 ${periodo === p ? 'bg-green-600 text-white' : 'bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200'}`}
-              >
-                {{ hoje: 'Hoje', semana: '7 dias', mes: '30 dias', tudo: 'Tudo' }[p]}
-              </button>
-            ))}
-          </div>
+          <PeriodoFilterButtons value={periodo} onChange={setPeriodo} />
         </div>
       </FilterBar>
 
@@ -567,6 +591,74 @@ export const PropostasManagement: React.FC = () => {
               </div>
             </div>
           </Surface>
+        </div>
+      )}
+
+      {porEstado.length > 0 && (
+        <div className="mb-6">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Distribuição geográfica</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Surface>
+              <div className="p-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">Por região</p>
+                <div className="space-y-2">
+                  {porRegiao.map((r) => {
+                    const max = Math.max(...porRegiao.map((x) => x.valor), 1);
+                    const pct = (r.valor / max) * 100;
+                    return (
+                      <div key={r.regiao}>
+                        <div className="flex items-center gap-3">
+                          <span className="w-24 text-xs font-semibold text-gray-700 dark:text-gray-200">{r.regiao}</span>
+                          <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                            <div className="h-full bg-cyan-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="w-24 text-right text-xs text-gray-600 dark:text-gray-300">{currency(r.valor)}</span>
+                        </div>
+                        {r.taxaConversao != null && (
+                          <p className="ml-24 pl-3 text-[11px] text-gray-400">{r.taxaConversao.toFixed(0)}% conversão · {r.count} propostas</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Surface>
+
+            <Surface>
+              <div className="p-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">Por estado</p>
+                <div className="space-y-2">
+                  {porEstado.map((e) => {
+                    const max = Math.max(...porEstado.map((x) => x.valor), 1);
+                    const pct = (e.valor / max) * 100;
+                    return (
+                      <div key={e.uf} className="flex items-center gap-3">
+                        <span className="w-12 text-xs font-semibold text-gray-700 dark:text-gray-200">{e.uf}</span>
+                        <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                          <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="w-24 text-right text-xs text-gray-600 dark:text-gray-300">{currency(e.valor)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Surface>
+
+            <Surface>
+              <div className="p-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">Top cidades</p>
+                <div className="space-y-2">
+                  {porCidade.map((c, idx) => (
+                    <div key={c.cidade} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700 dark:text-gray-200 truncate">{idx + 1}. {c.cidade}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">{currency(c.valor)} ({c.count})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Surface>
+          </div>
         </div>
       )}
 

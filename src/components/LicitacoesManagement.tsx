@@ -3,7 +3,8 @@ import { Search, Gavel } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import EmptyState from './EmptyState';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { FilterBar, PageHeader, StatusBadge, Surface } from './ui';
+import { FilterBar, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
+import { Periodo, periodoSince } from '../lib/periodoFiltro';
 
 const MODALIDADES = ['PIT', 'PDA', 'PCE', 'PLACA', 'HAMMER'] as const;
 type Modalidade = typeof MODALIDADES[number];
@@ -22,6 +23,7 @@ interface Licitacao {
   orgaoLicitante: string | null;
   numeroProcesso: string | null;
   dataAbertura: string | null;
+  createdAt: string;
 }
 
 const currency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -35,6 +37,7 @@ export const LicitacoesManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<Status | 'todas'>('todas');
+  const [periodo, setPeriodo] = useState<Periodo>('tudo');
 
   const fetchData = async () => {
     if (!isSupabaseConfigured) { setLicitacoes([]); return; }
@@ -42,7 +45,7 @@ export const LicitacoesManagement: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('propostas')
-        .select('id, numero, modalidade, cliente_nome, obra_nome, cidade, uf, valor_total, status, orgao_licitante, numero_processo, data_abertura')
+        .select('id, numero, modalidade, cliente_nome, obra_nome, cidade, uf, valor_total, status, orgao_licitante, numero_processo, data_abertura, created_at')
         .eq('eh_licitacao', true)
         .order('data_abertura', { ascending: false, nullsFirst: false });
       if (error) throw error;
@@ -59,6 +62,7 @@ export const LicitacoesManagement: React.FC = () => {
         orgaoLicitante: row.orgao_licitante,
         numeroProcesso: row.numero_processo,
         dataAbertura: row.data_abertura,
+        createdAt: row.created_at,
       })));
     } catch {
       toast.error('Não foi possível carregar as licitações. Tente novamente.');
@@ -71,6 +75,11 @@ export const LicitacoesManagement: React.FC = () => {
   useEffect(() => { fetchData(); }, []);
 
   const filtered = useMemo(() => licitacoes.filter((l) => {
+    const since = periodoSince(periodo);
+    if (since) {
+      const ref = l.dataAbertura ? new Date(l.dataAbertura) : new Date(l.createdAt);
+      if (ref < since) return false;
+    }
     if (statusFiltro !== 'todas' && l.status !== statusFiltro) return false;
     const term = searchTerm.trim().toLowerCase();
     if (!term) return true;
@@ -78,7 +87,7 @@ export const LicitacoesManagement: React.FC = () => {
       || (l.obraNome || '').toLowerCase().includes(term)
       || (l.orgaoLicitante || '').toLowerCase().includes(term)
       || (l.numeroProcesso || '').toLowerCase().includes(term);
-  }), [licitacoes, statusFiltro, searchTerm]);
+  }), [licitacoes, statusFiltro, searchTerm, periodo]);
 
   const totais = useMemo(() => {
     const valorTotal = filtered.reduce((sum, l) => sum + l.valorTotal, 0);
@@ -123,6 +132,7 @@ export const LicitacoesManagement: React.FC = () => {
         >
           {loading ? 'Atualizando...' : 'Atualizar'}
         </button>
+        <PeriodoFilterButtons value={periodo} onChange={setPeriodo} />
       </FilterBar>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

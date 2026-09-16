@@ -1,7 +1,23 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { LucideIcon, X } from 'lucide-react';
+import { PERIODOS, PERIODO_LABELS, Periodo } from '../lib/periodoFiltro';
 
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
+
+export const PeriodoFilterButtons: React.FC<{ value: Periodo; onChange: (p: Periodo) => void }> = ({ value, onChange }) => (
+  <div className="flex rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden text-sm">
+    {PERIODOS.map((p) => (
+      <button
+        key={p}
+        type="button"
+        onClick={() => onChange(p)}
+        className={cx('px-3 py-2', value === p ? 'bg-green-600 text-white' : 'bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200')}
+      >
+        {PERIODO_LABELS[p]}
+      </button>
+    ))}
+  </div>
+);
 
 export const PageHeader: React.FC<{
   title: string;
