@@ -117,7 +117,7 @@ export const PropostasManagement: React.FC = () => {
   const [parsing, setParsing] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [periodo, setPeriodo] = useState<Periodo>('mes');
+  const [periodo, setPeriodo] = useState<Periodo>('tudo');
   const [cidadeFiltro, setCidadeFiltro] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<Status | 'todas'>('todas');
 
@@ -524,7 +524,17 @@ export const PropostasManagement: React.FC = () => {
         ))}
       </div>
 
-      {filteredForList.length === 0 && (
+      {filteredForList.length === 0 && propostas.length > 0 && (
+        <EmptyState
+          icon={Search}
+          title="Nenhuma proposta com esse filtro"
+          description="Existem propostas cadastradas, mas nenhuma bate com a busca, cidade, status ou período selecionados."
+          actionLabel="Limpar filtros"
+          onAction={() => { setSearchTerm(''); setCidadeFiltro(''); setStatusFiltro('todas'); setPeriodo('tudo'); }}
+        />
+      )}
+
+      {propostas.length === 0 && (
         <EmptyState
           icon={FileUp}
           title="Nenhuma proposta encontrada"
@@ -641,7 +651,7 @@ export const PropostasManagement: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-2">
             <button type="button" onClick={handleCloseModal} className="w-full sm:w-auto px-4 py-2 text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">Cancelar</button>
-            <button type="submit" className="w-full sm:w-auto px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">{editingProposta ? 'Atualizar' : 'Salvar proposta'}</button>
+            <button type="submit" disabled={loading} className="w-full sm:w-auto px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Salvando...' : editingProposta ? 'Atualizar' : 'Salvar proposta'}</button>
           </div>
         </form>
       </Modal>
