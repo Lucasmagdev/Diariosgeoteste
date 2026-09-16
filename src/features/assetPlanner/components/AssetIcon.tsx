@@ -16,7 +16,14 @@ export function AssetIcon({
 
   if (item.imageUrl && !imageError) {
     return (
-      <img src={item.imageUrl} alt="" className={className} onError={() => setImageError(true)} />
+      <img
+        src={item.imageUrl}
+        alt=""
+        className={className}
+        onError={() => setImageError(true)}
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
+      />
     );
   }
 

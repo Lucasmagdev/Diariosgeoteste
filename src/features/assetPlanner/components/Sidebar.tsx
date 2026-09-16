@@ -446,7 +446,13 @@ function GroupSection({
             style={{ background: group.color }}
           >
             {group.iconUrl ? (
-              <img src={group.iconUrl} alt="" className="h-full w-full object-contain p-1" />
+              <img
+                src={group.iconUrl}
+                alt=""
+                className="h-full w-full object-contain p-1"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
+              />
             ) : (
               <Layers className="h-4 w-4 text-white" />
             )}
@@ -617,7 +623,13 @@ function CategoryDialog({
                   className="relative h-12 w-12 overflow-hidden rounded-lg border"
                   style={{ background: color }}
                 >
-                  <img src={iconUrl} alt="" className="h-full w-full object-contain p-1" />
+                  <img
+                    src={iconUrl}
+                    alt=""
+                    className="h-full w-full object-contain p-1"
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
+                  />
                   <button
                     type="button"
                     onClick={() => setIconUrl(undefined)}
