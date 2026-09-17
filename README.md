@@ -174,6 +174,30 @@ A extração roda na Netlify Function `parse-proposta-pdf` (usa `pdfjs-dist` no 
 
 Rode `banco de dados/create_propostas.sql` uma vez no SQL Editor do Supabase antes de usar essa aba.
 
+## Consultas WhatsApp (Evolution API)
+
+A sub-aba **Comercial > Consultas WhatsApp** loga a primeira mensagem de cada número novo que chega pela instância do WhatsApp (Evolution API) — mensagens seguintes da mesma conversa não geram uma consulta nova, só a primeira conta. Qualificação (qualificada/desqualificada + motivo) e origem (marketing, orgânico, indicação etc.) são preenchidas manualmente por enquanto; cruzar automaticamente com o tracking de head/UTM das campanhas fica para depois.
+
+A function `evolution-webhook` recebe o evento `messages.upsert` da Evolution API. Configure na Evolution API (por instância, endpoint de webhooks) a URL:
+
+```text
+https://<seu-site>.netlify.app/.netlify/functions/evolution-webhook?secret=<EVOLUTION_WEBHOOK_SECRET>
+```
+
+Ou, se a sua versão da Evolution API permitir header customizado no webhook, pode mandar `x-webhook-secret` no header em vez do `?secret=` na URL — a function aceita qualquer um dos dois.
+
+Configure esta variável no ambiente do Netlify:
+
+```text
+EVOLUTION_WEBHOOK_SECRET=<string aleatória — a mesma usada na URL/header do webhook>
+```
+
+Reaproveita `VITE_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` (já configuradas pela integração do Pipefy) — não precisa de credencial nova além do secret do webhook.
+
+O payload da Evolution API segue o padrão do evento `messages.upsert` (baseado em Baileys); os campos exatos (`data.message.conversation` etc.) ainda não foram validados contra uma instância real — no primeiro teste ao vivo, pode ser necessário ajustar a extração de texto/contato na function, do mesmo jeito que aconteceu com o parser de PDF de propostas.
+
+Rode `banco de dados/create_consultas_whatsapp.sql` uma vez no SQL Editor do Supabase antes de usar essa aba.
+
 ## 📝 Scripts Disponíveis
 
 ```bash

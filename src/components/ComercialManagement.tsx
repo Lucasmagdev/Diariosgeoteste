@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { PropostasManagement } from './PropostasManagement';
 import { ConcorrenciaManagement } from './ConcorrenciaManagement';
 import { LicitacoesManagement } from './LicitacoesManagement';
+import { ConsultasWhatsappManagement } from './ConsultasWhatsappManagement';
 
-type ComercialTab = 'propostas' | 'concorrencia' | 'licitacoes';
+type ComercialTab = 'propostas' | 'concorrencia' | 'licitacoes' | 'consultas-whatsapp';
 
 const TABS: { key: ComercialTab; label: string }[] = [
   { key: 'propostas', label: 'Propostas' },
   { key: 'concorrencia', label: 'Concorrência' },
   { key: 'licitacoes', label: 'Licitações' },
+  { key: 'consultas-whatsapp', label: 'Consultas WhatsApp' },
 ];
 
 export const ComercialManagement: React.FC = () => {
@@ -36,6 +38,7 @@ export const ComercialManagement: React.FC = () => {
       {tab === 'propostas' && <PropostasManagement />}
       {tab === 'concorrencia' && <ConcorrenciaManagement />}
       {tab === 'licitacoes' && <LicitacoesManagement />}
+      {tab === 'consultas-whatsapp' && <ConsultasWhatsappManagement />}
     </div>
   );
 };
