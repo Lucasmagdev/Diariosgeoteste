@@ -198,6 +198,20 @@ O payload da Evolution API segue o padrão do evento `messages.upsert` (baseado 
 
 Rode `banco de dados/create_consultas_whatsapp.sql` uma vez no SQL Editor do Supabase antes de usar essa aba.
 
+### Conectar o WhatsApp pela própria tela (QR code)
+
+Dentro de "Consultas WhatsApp" tem um painel de conexão: mostra se o WhatsApp está conectado, e um botão "Conectar WhatsApp" que abre um QR code pra escanear pelo celular (Configurações > Aparelhos conectados). O QR se renova sozinho antes de expirar (não trava esperando escaneamento) e a tela fecha e mostra "Conectado" assim que o WhatsApp reconhece o QR — sem precisar dar F5.
+
+Isso fala direto com a API de administração da Evolution API (endpoints `/instance/connect`, `/instance/connectionState`, `/instance/logout`), via a function `evolution-instance` — diferente da `evolution-webhook` (que só recebe mensagens). Configure estas variáveis no Netlify:
+
+```text
+EVOLUTION_API_URL=<URL base da sua instância Evolution API, ex: https://evolution.seudominio.com>
+EVOLUTION_API_KEY=<API key global/da instância, gerada na própria Evolution API>
+EVOLUTION_INSTANCE_NAME=<opcional — nome da instância, padrão "geoteste">
+```
+
+A Evolution API precisa estar rodando em algum lugar (self-hosted ou um provedor de hospedagem dela) — essa function só conversa com uma instância já no ar, não sobe uma sozinha.
+
 ## 📝 Scripts Disponíveis
 
 ```bash

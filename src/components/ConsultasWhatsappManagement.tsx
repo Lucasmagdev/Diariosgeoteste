@@ -7,6 +7,7 @@ import FormTextarea from './FormTextarea';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
 import { Periodo, periodoSince } from '../lib/periodoFiltro';
+import { WhatsappConnection } from './WhatsappConnection';
 
 type Qualificacao = 'pendente' | 'qualificada' | 'desqualificada';
 
@@ -175,6 +176,8 @@ export const ConsultasWhatsappManagement: React.FC = () => {
           </button>
         }
       />
+
+      <WhatsappConnection />
 
       <FilterBar>
         <div className="relative flex-1 min-w-[200px]">
