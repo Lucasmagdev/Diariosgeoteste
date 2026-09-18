@@ -129,6 +129,8 @@ export const PropostasManagement: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [periodo, setPeriodo] = useState<Periodo>('tudo');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
   const [cidadeFiltro, setCidadeFiltro] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<Status | 'todas'>('todas');
 
@@ -229,14 +231,19 @@ export const PropostasManagement: React.FC = () => {
 
   const since = useMemo(() => periodoSince(periodo), [periodo]);
 
+  const temRangeCustom = Boolean(dataInicio || dataFim);
+
   const filteredForCards = useMemo(() => propostas.filter((p) => {
-    if (since) {
-      const ref = p.dataProposta ? new Date(p.dataProposta) : new Date(p.createdAt);
+    const ref = p.dataProposta ? new Date(p.dataProposta) : new Date(p.createdAt);
+    if (temRangeCustom) {
+      if (dataInicio && ref < new Date(`${dataInicio}T00:00:00`)) return false;
+      if (dataFim && ref > new Date(`${dataFim}T23:59:59`)) return false;
+    } else if (since) {
       if (ref < since) return false;
     }
     if (cidadeFiltro.trim() && !(p.cidade || '').toLowerCase().includes(cidadeFiltro.trim().toLowerCase())) return false;
     return true;
-  }), [propostas, since, cidadeFiltro]);
+  }), [propostas, since, temRangeCustom, dataInicio, dataFim, cidadeFiltro]);
 
   const filteredForList = useMemo(() => filteredForCards.filter((p) => {
     if (statusFiltro !== 'todas' && p.status !== statusFiltro) return false;
@@ -578,6 +585,32 @@ export const PropostasManagement: React.FC = () => {
             {loading ? 'Atualizando...' : 'Atualizar'}
           </button>
           <PeriodoFilterButtons value={periodo} onChange={setPeriodo} />
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">De</span>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+            />
+            <span className="text-xs text-gray-500 dark:text-gray-400">até</span>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+            />
+            {temRangeCustom && (
+              <button
+                type="button"
+                onClick={() => { setDataInicio(''); setDataFim(''); }}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                title="Limpar intervalo de datas"
+              >
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </FilterBar>
 
@@ -771,7 +804,7 @@ export const PropostasManagement: React.FC = () => {
           title="Nenhuma proposta com esse filtro"
           description="Existem propostas cadastradas, mas nenhuma bate com a busca, cidade, status ou período selecionados."
           actionLabel="Limpar filtros"
-          onAction={() => { setSearchTerm(''); setCidadeFiltro(''); setStatusFiltro('todas'); setPeriodo('tudo'); }}
+          onAction={() => { setSearchTerm(''); setCidadeFiltro(''); setStatusFiltro('todas'); setPeriodo('tudo'); setDataInicio(''); setDataFim(''); }}
         />
       )}
 
