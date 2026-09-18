@@ -768,14 +768,24 @@ export const PropostasManagement: React.FC = () => {
               <button type="button" onClick={handleAddItem} className="text-xs text-green-700 dark:text-green-300 hover:underline">+ Adicionar linha</button>
             </div>
             <div className="space-y-2">
+              {itens.length > 0 && (
+                <div className="grid grid-cols-12 gap-1 px-0.5">
+                  <span className="col-span-5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Descrição</span>
+                  <span className="col-span-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Unidade</span>
+                  <span className="col-span-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Qtd.</span>
+                  <span className="col-span-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Valor unit.</span>
+                  <span className="col-span-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Valor total</span>
+                  <span className="col-span-1" />
+                </div>
+              )}
               {itens.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-1 items-center">
                   <input className="col-span-5 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="Descrição" value={item.descricao} onChange={(e) => handleItemChange(idx, 'descricao', e.target.value)} />
-                  <input className="col-span-2 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="Und" value={item.unidade || ''} onChange={(e) => handleItemChange(idx, 'unidade', e.target.value)} />
-                  <input className="col-span-1 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="Qtd" type="number" value={item.quantidade ?? ''} onChange={(e) => handleItemChange(idx, 'quantidade', e.target.value)} />
-                  <input className="col-span-2 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="V. unit." type="number" value={item.valorUnitario ?? ''} onChange={(e) => handleItemChange(idx, 'valorUnitario', e.target.value)} />
-                  <input className="col-span-1 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="V. est." type="number" value={item.valorEstimado ?? ''} onChange={(e) => handleItemChange(idx, 'valorEstimado', e.target.value)} />
-                  <button type="button" onClick={() => handleRemoveItem(idx)} className="col-span-1 flex justify-center text-gray-400 hover:text-red-600">
+                  <input className="col-span-2 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="Ex: vb, dia, und." value={item.unidade || ''} onChange={(e) => handleItemChange(idx, 'unidade', e.target.value)} />
+                  <input className="col-span-1 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="0" type="number" value={item.quantidade ?? ''} onChange={(e) => handleItemChange(idx, 'quantidade', e.target.value)} />
+                  <input className="col-span-2 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="R$ por unidade" type="number" value={item.valorUnitario ?? ''} onChange={(e) => handleItemChange(idx, 'valorUnitario', e.target.value)} />
+                  <input className="col-span-1 px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100" placeholder="R$" type="number" value={item.valorEstimado ?? ''} onChange={(e) => handleItemChange(idx, 'valorEstimado', e.target.value)} />
+                  <button type="button" onClick={() => handleRemoveItem(idx)} className="col-span-1 flex justify-center text-gray-400 hover:text-red-600" aria-label="Remover item">
                     <XIcon className="h-3.5 w-3.5" />
                   </button>
                 </div>
