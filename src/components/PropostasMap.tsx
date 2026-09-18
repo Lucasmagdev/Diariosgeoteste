@@ -1,123 +1,96 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
-import type { Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { UF_COORDENADAS, BRASIL_CENTRO } from '../lib/ufCoordenadas';
-
-interface EstadoDado {
-  uf: string;
-  valor: number;
-  count: number;
-}
+import type { EstadoDado, PontoExato } from '../lib/propostasGeo';
 
 const currency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
-export const PropostasMap: React.FC<{ data: EstadoDado[] }> = ({ data }) => {
-  const [fullscreen, setFullscreen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
+// Preferimos abrir o mapa numa aba nova (mesma logica do Malão Geoteste em
+// App.tsx) a fazer fullscreen dentro da pagina: fullscreen via CSS/Fullscreen
+// API depende de contexto de stacking dos ancestrais e é fácil de vazar por
+// cima de modais — uma aba propria elimina essa classe de bug de vez.
+const abrirMapaEmNovaAba = () => {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('mapaComercial', '1');
+  window.open(url.toString(), '_blank', 'noopener,noreferrer');
+};
 
+interface PropostasMapProps {
+  data: EstadoDado[];
+  pontos?: PontoExato[];
+  height?: string;
+  interactive?: boolean;
+  showOpenButton?: boolean;
+}
+
+export const PropostasMap: React.FC<PropostasMapProps> = ({ data, pontos = [], height = 'h-64', interactive = false, showOpenButton = true }) => {
   const maxValor = Math.max(...data.map((d) => d.valor), 1);
-  const pontos = data
-    .filter((d) => UF_COORDENADAS[d.uf])
-    .map((d) => ({ ...d, coord: UF_COORDENADAS[d.uf] }));
-
-  // Fullscreen de verdade (Fullscreen API), não so CSS "fixed" — um
-  // ancestral com transform/filter/transition quebraria um `position:
-  // fixed` (vira relativo a esse ancestral, nao a viewport). A API do
-  // navegador nao tem esse problema, e sincroniza sozinha se o usuario
-  // sair apertando Esc em vez do botao.
-  useEffect(() => {
-    const onChange = () => {
-      const isFs = document.fullscreenElement === wrapperRef.current;
-      setFullscreen(isFs);
-      setTimeout(() => mapRef.current?.invalidateSize(), 50);
-    };
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, []);
-
-  const toggleFullscreen = async () => {
-    if (!wrapperRef.current) return;
-    try {
-      if (!document.fullscreenElement) {
-        await wrapperRef.current.requestFullscreen();
-      } else {
-        await document.exitFullscreen();
-      }
-    } catch {
-      // Fullscreen API indisponivel (ex: iframe sem allow="fullscreen")
-      // — cai pro estado visual mesmo assim, so nao ocupa a tela do SO.
-      setFullscreen((f) => !f);
-      setTimeout(() => mapRef.current?.invalidateSize(), 50);
-    }
-  };
+  const estados = data.filter((d) => UF_COORDENADAS[d.uf]).map((d) => ({ ...d, coord: UF_COORDENADAS[d.uf] }));
 
   return (
-    <div
-      ref={wrapperRef}
-      className={fullscreen ? 'fixed inset-0 z-[100] bg-gray-950 p-4 flex flex-col' : 'relative h-64 rounded-lg overflow-hidden'}
-    >
-      {fullscreen && (
-        <div className="flex items-center justify-between mb-3 flex-shrink-0">
-          <p className="text-sm font-semibold text-white">Distribuição geográfica — mapa</p>
-          <button
-            onClick={toggleFullscreen}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+    <div className={`relative ${height} rounded-lg overflow-hidden`}>
+      <MapContainer
+        center={BRASIL_CENTRO}
+        zoom={interactive ? 5 : 4}
+        scrollWheelZoom={interactive}
+        dragging={interactive}
+        className="h-full w-full rounded-lg proposta-map-dark"
+        style={{ background: '#0f172a' }}
+      >
+        {/* OSM padrão — o tile escuro do CartoDB passou a exigir API key
+            paga (mudança deles, sem aviso). Filtro CSS (.proposta-map-dark)
+            escurece/inverte pra manter a estética sem depender de chave. */}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {estados.map((p) => {
+          const radius = 8 + (p.valor / maxValor) * 28;
+          return (
+            <CircleMarker
+              key={p.uf}
+              center={p.coord}
+              radius={radius}
+              pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.35, weight: 2 }}
+            >
+              <Popup>
+                <strong>{p.uf}</strong>
+                <br />
+                {currency(p.valor)}
+                <br />
+                {p.count} proposta{p.count !== 1 ? 's' : ''}
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+        {pontos.map((p) => (
+          <CircleMarker
+            key={p.id}
+            center={[p.lat, p.lon]}
+            radius={6}
+            pathOptions={{ color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.9, weight: 1.5 }}
           >
-            <Minimize2 className="h-4 w-4" />
-            Sair da tela cheia
-          </button>
-        </div>
-      )}
-
-      <div className={fullscreen ? 'flex-1 min-h-0' : 'h-full w-full'}>
-        <MapContainer
-          ref={mapRef}
-          center={BRASIL_CENTRO}
-          zoom={fullscreen ? 5 : 4}
-          scrollWheelZoom={fullscreen}
-          dragging={fullscreen}
-          className="h-full w-full rounded-lg proposta-map-dark"
-          style={{ background: '#0f172a' }}
-        >
-          {/* OSM padrão — o tile escuro do CartoDB passou a exigir API key
-              paga (mudança deles, sem aviso). Filtro CSS (.proposta-map-dark)
-              escurece/inverte pra manter a estética sem depender de chave. */}
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {pontos.map((p) => {
-            const radius = 8 + (p.valor / maxValor) * 28;
-            return (
-              <CircleMarker
-                key={p.uf}
-                center={p.coord}
-                radius={radius}
-                pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.55, weight: 2 }}
-              >
-                <Popup>
-                  <strong>{p.uf}</strong>
-                  <br />
-                  {currency(p.valor)}
-                  <br />
-                  {p.count} proposta{p.count !== 1 ? 's' : ''}
-                </Popup>
-              </CircleMarker>
-            );
-          })}
-        </MapContainer>
-      </div>
-
-      {!fullscreen && (
+            <Popup>
+              <strong>{p.numero || 'Sem número'}</strong>
+              <br />
+              {p.label}
+              <br />
+              {currency(p.valor)}
+            </Popup>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+      {showOpenButton && (
         <button
-          onClick={toggleFullscreen}
+          onClick={abrirMapaEmNovaAba}
           className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-200 rounded-lg shadow hover:bg-white dark:hover:bg-gray-800"
         >
-          <Maximize2 className="h-3.5 w-3.5" />
-          Tela cheia
+          <ExternalLink className="h-3.5 w-3.5" />
+          Abrir em nova aba
         </button>
       )}
     </div>

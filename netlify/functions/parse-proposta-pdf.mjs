@@ -104,7 +104,9 @@ const detectModalidadeFromFilename = (fileName) => {
 
 const parseCidadeUf = (endereco) => {
   if (!endereco) return { cidade: null, uf: null };
-  const match = endereco.match(/([A-Za-zÀ-ÿ' ]+)\/([A-Za-z]{2})\s*$/);
+  // Endereço às vezes termina com pontuação sobrando ("...Duque De Caxias/RJ.")
+  // — sem isso o \s*$ nunca batia e cidade/UF ficavam em branco.
+  const match = endereco.replace(/[.\s]+$/, '').match(/([A-Za-zÀ-ÿ' ]+)\/([A-Za-z]{2})$/);
   if (!match) return { cidade: null, uf: null };
   return { cidade: match[1].trim(), uf: match[2].toUpperCase() };
 };

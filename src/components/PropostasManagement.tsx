@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Search, Plus, FileUp, Loader2, Trash2, Edit, CheckCircle2, XCircle, TrendingUp, X as XIcon,
+  Search, Plus, FileUp, Loader2, Trash2, Edit, CheckCircle2, XCircle, TrendingUp, X as XIcon, MapPin,
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmDialog from './ConfirmDialog';
@@ -12,6 +12,8 @@ import { DonutChart, FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButt
 import { ObraSelector, ObraOption } from './ObraSelector';
 import { Periodo, periodoSince, regiaoPorUf } from '../lib/periodoFiltro';
 import { PropostasMap } from './PropostasMap';
+import { porEstadoFrom, pontosExatosFrom } from '../lib/propostasGeo';
+import { geocodeEndereco } from '../lib/geocoding';
 
 const MODALIDADES = ['PIT', 'PDA', 'PCE', 'PLACA', 'HAMMER'] as const;
 type Modalidade = typeof MODALIDADES[number];
@@ -37,6 +39,8 @@ interface Proposta {
   enderecoObra: string | null;
   cidade: string | null;
   uf: string | null;
+  latitude: number | null;
+  longitude: number | null;
   contatoNome: string | null;
   contatoTelefone: string | null;
   responsavelComercial: string | null;
@@ -72,6 +76,8 @@ const emptyForm = {
   enderecoObra: '',
   cidade: '',
   uf: '',
+  latitude: '' as string,
+  longitude: '' as string,
   contatoNome: '',
   contatoTelefone: '',
   responsavelComercial: '',
@@ -130,6 +136,7 @@ export const PropostasManagement: React.FC = () => {
   const [editingProposta, setEditingProposta] = useState<Proposta | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [itens, setItens] = useState<PropostaItem[]>([]);
+  const [geocodeStatus, setGeocodeStatus] = useState<'idle' | 'loading' | 'ok' | 'erro'>('idle');
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; id: string | null; label: string | null }>({ isOpen: false, id: null, label: null });
 
   const mapRowToProposta = (row: any): Proposta => ({
@@ -144,6 +151,8 @@ export const PropostasManagement: React.FC = () => {
     enderecoObra: row.endereco_obra || null,
     cidade: row.cidade || null,
     uf: row.uf || null,
+    latitude: row.latitude != null ? Number(row.latitude) : null,
+    longitude: row.longitude != null ? Number(row.longitude) : null,
     contatoNome: row.contato_nome || null,
     contatoTelefone: row.contato_telefone || null,
     responsavelComercial: row.responsavel_comercial || null,
@@ -194,6 +203,29 @@ export const PropostasManagement: React.FC = () => {
   };
 
   useEffect(() => { fetchPropostas(); fetchObras(); }, []);
+
+  // Geocodifica o endereço da obra pra preencher cidade/UF/lat/lon sozinho
+  // (o parser de PDF só acerta cidade/UF quando o endereço termina exatamente
+  // em "Cidade/UF" — qualquer variação de formato, ou digitação manual, fica
+  // sem essa info e cai fora do mapa). Roda no blur do campo e depois de
+  // importar PDF; o botão ao lado do campo permite repetir manualmente.
+  const runGeocode = async (endereco: string) => {
+    if (!endereco.trim()) return;
+    setGeocodeStatus('loading');
+    const result = await geocodeEndereco(endereco);
+    if (result) {
+      setForm((f) => ({
+        ...f,
+        cidade: result.cidade || f.cidade,
+        uf: result.uf || f.uf,
+        latitude: result.lat != null ? String(result.lat) : f.latitude,
+        longitude: result.lon != null ? String(result.lon) : f.longitude,
+      }));
+      setGeocodeStatus('ok');
+    } else {
+      setGeocodeStatus('erro');
+    }
+  };
 
   const since = useMemo(() => periodoSince(periodo), [periodo]);
 
@@ -254,17 +286,9 @@ export const PropostasManagement: React.FC = () => {
       .sort((a, b) => b.valor - a.valor);
   }, [filteredForCards]);
 
-  const porEstado = useMemo(() => {
-    const map = new Map<string, { valor: number; count: number }>();
-    filteredForCards.forEach((p) => {
-      const uf = p.uf || 'Sem estado';
-      const entry = map.get(uf) || { valor: 0, count: 0 };
-      entry.valor += p.valorTotal;
-      entry.count += 1;
-      map.set(uf, entry);
-    });
-    return Array.from(map.entries()).map(([uf, v]) => ({ uf, ...v })).sort((a, b) => b.valor - a.valor);
-  }, [filteredForCards]);
+  const porEstado = useMemo(() => porEstadoFrom(filteredForCards), [filteredForCards]);
+
+  const pontosExatos = useMemo(() => pontosExatosFrom(filteredForCards), [filteredForCards]);
 
   const porCidade = useMemo(() => {
     const map = new Map<string, { valor: number; count: number }>();
@@ -291,12 +315,13 @@ export const PropostasManagement: React.FC = () => {
     return Array.from(map.entries()).map(([motivo, v]) => ({ motivo, ...v })).sort((a, b) => b.count - a.count);
   }, [filteredForCards]);
 
-  const resetForm = () => { setForm(emptyForm); setItens([]); };
+  const resetForm = () => { setForm(emptyForm); setItens([]); setGeocodeStatus('idle'); };
 
   const handleOpenNew = () => { setEditingProposta(null); resetForm(); setShowModal(true); };
 
   const handleOpenEdit = (p: Proposta) => {
     setEditingProposta(p);
+    setGeocodeStatus(p.latitude != null ? 'ok' : 'idle');
     setForm({
       numero: p.numero || '',
       revisao: p.revisao || '',
@@ -308,6 +333,8 @@ export const PropostasManagement: React.FC = () => {
       enderecoObra: p.enderecoObra || '',
       cidade: p.cidade || '',
       uf: p.uf || '',
+      latitude: p.latitude != null ? String(p.latitude) : '',
+      longitude: p.longitude != null ? String(p.longitude) : '',
       contatoNome: p.contatoNome || '',
       contatoTelefone: p.contatoTelefone || '',
       responsavelComercial: p.responsavelComercial || '',
@@ -376,6 +403,12 @@ export const PropostasManagement: React.FC = () => {
       setItens(Array.isArray(extracted.itens) ? extracted.itens : []);
       setShowModal(true);
       toast.success('PDF lido! Confira os dados antes de salvar.');
+
+      if (extracted.enderecoObra && (!extracted.cidade || !extracted.uf)) {
+        runGeocode(extracted.enderecoObra);
+      } else {
+        setGeocodeStatus('idle');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Não foi possível ler este PDF.');
     } finally {
@@ -414,6 +447,8 @@ export const PropostasManagement: React.FC = () => {
       endereco_obra: form.enderecoObra.trim() || null,
       cidade: form.cidade.trim() || null,
       uf: form.uf.trim() || null,
+      latitude: form.latitude ? Number(form.latitude) : null,
+      longitude: form.longitude ? Number(form.longitude) : null,
       contato_nome: form.contatoNome.trim() || null,
       contato_telefone: form.contatoTelefone.trim() || null,
       responsavel_comercial: form.responsavelComercial.trim() || null,
@@ -605,7 +640,7 @@ export const PropostasManagement: React.FC = () => {
           <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Distribuição geográfica</p>
           <Surface className="mb-4">
             <div className="p-2">
-              <PropostasMap data={porEstado} />
+              <PropostasMap data={porEstado} pontos={pontosExatos} />
             </div>
           </Surface>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -782,7 +817,32 @@ export const PropostasManagement: React.FC = () => {
           </div>
 
           <FormInput label="Nome da obra (texto livre)" type="text" value={form.obraNome} onChange={(e) => setForm((f) => ({ ...f, obraNome: e.target.value }))} />
-          <FormInput label="Endereço da obra" type="text" value={form.enderecoObra} onChange={(e) => setForm((f) => ({ ...f, enderecoObra: e.target.value }))} />
+
+          <div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <FormInput
+                  label="Endereço da obra"
+                  type="text"
+                  value={form.enderecoObra}
+                  onChange={(e) => { setForm((f) => ({ ...f, enderecoObra: e.target.value })); setGeocodeStatus('idle'); }}
+                  onBlur={(e) => { if (!form.cidade && !form.uf) runGeocode(e.target.value); }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => runGeocode(form.enderecoObra)}
+                disabled={!form.enderecoObra.trim() || geocodeStatus === 'loading'}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+                title="Localizar endereço no mapa"
+              >
+                {geocodeStatus === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
+                Localizar
+              </button>
+            </div>
+            {geocodeStatus === 'ok' && <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">Endereço localizado — cidade, UF e coordenadas preenchidas.</p>}
+            {geocodeStatus === 'erro' && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">Endereço não localizado — preencha cidade/UF manualmente.</p>}
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormInput label="Cidade" type="text" value={form.cidade} onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))} />

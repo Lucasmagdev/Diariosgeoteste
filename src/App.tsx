@@ -23,6 +23,7 @@ import { PublicDiarySignature } from './components/PublicDiarySignature';
 import { PublicChecklistFill } from './components/PublicChecklistFill';
 import { PublicSurveyFill } from './components/PublicSurveyFill';
 import { PortalManagement } from './components/PortalManagement';
+import { PropostasMapPage } from './components/PropostasMapPage';
 import { SatisfactionSurveys } from './components/SatisfactionSurveys';
 import { PitEnsaiosPanel } from './components/PitEnsaiosPanel';
 import { ClientPortal } from './components/ClientPortal';
@@ -61,10 +62,14 @@ const AppContent: React.FC = () => {
     () => new URLSearchParams(window.location.search).get('portal') != null,
     []
   );
+  const isMapaComercialPage = useMemo(
+    () => new URLSearchParams(window.location.search).get('mapaComercial') === '1',
+    []
+  );
 
   // Intro cinematográfica: apenas na área admin (interna), uma vez por sessão.
   // ?introPreview=1 força replay.
-  const isAdminArea = !isDedicatedPlannerPage && !isClientPortalPage && !isPublicSignaturePage && !isPublicChecklistPage && !isPublicSurveyPage;
+  const isAdminArea = !isDedicatedPlannerPage && !isClientPortalPage && !isPublicSignaturePage && !isPublicChecklistPage && !isPublicSurveyPage && !isMapaComercialPage;
   const [showIntro, setShowIntro] = useState(() => {
     if (!isAdminArea) return false;
     const forceIntro = new URLSearchParams(window.location.search).get('introPreview') === '1';
@@ -79,7 +84,7 @@ const AppContent: React.FC = () => {
 
   // Mostrar splash screen apenas na primeira vez e se for PWA ou mobile
   useEffect(() => {
-    if (isDedicatedPlannerPage || isPublicSignaturePage || isClientPortalPage || isPublicChecklistPage || isPublicSurveyPage) {
+    if (isDedicatedPlannerPage || isPublicSignaturePage || isClientPortalPage || isPublicChecklistPage || isPublicSurveyPage || isMapaComercialPage) {
       setShowSplash(false);
       return;
     }
@@ -96,7 +101,7 @@ const AppContent: React.FC = () => {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [isPWA, isDedicatedPlannerPage, isPublicSignaturePage, isClientPortalPage, isPublicChecklistPage, isPublicSurveyPage]);
+  }, [isPWA, isDedicatedPlannerPage, isPublicSignaturePage, isClientPortalPage, isPublicChecklistPage, isPublicSurveyPage, isMapaComercialPage]);
 
   const handlePageChange = useCallback((page: string) => {
     if (page === 'asset-planner') {
@@ -163,6 +168,17 @@ const AppContent: React.FC = () => {
         <AssetPlanner dedicated />
       </React.Suspense>
     );
+  }
+
+  if (isMapaComercialPage) {
+    if (user.role !== 'admin') {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6 text-center dark:bg-gray-950">
+          <p className="text-sm text-gray-600 dark:text-gray-300">Acesso ao mapa comercial restrito a administradores.</p>
+        </div>
+      );
+    }
+    return <PropostasMapPage />;
   }
 
   const renderPage = () => {
