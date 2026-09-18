@@ -75,7 +75,7 @@ export const PropostasMapPage: React.FC = () => {
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando mapa...
           </div>
         ) : (
-          <PropostasMap data={porEstado} pontos={pontos} height="h-[calc(100vh-6rem)]" interactive showOpenButton={false} />
+          <PropostasMap data={porEstado} pontos={pontos} height="h-[calc(100vh-6rem)]" interactive />
         )}
       </div>
     </div>

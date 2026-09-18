@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Search, Plus, FileUp, Loader2, Trash2, Edit, CheckCircle2, XCircle, TrendingUp, X as XIcon, MapPin,
+  Search, Plus, FileUp, Loader2, Trash2, Edit, CheckCircle2, XCircle, TrendingUp, X as XIcon, MapPin, Maximize2,
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmDialog from './ConfirmDialog';
@@ -11,7 +11,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { DonutChart, FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
 import { ObraSelector, ObraOption } from './ObraSelector';
 import { Periodo, periodoSince, regiaoPorUf } from '../lib/periodoFiltro';
-import { PropostasMap } from './PropostasMap';
+import { PropostasMap, abrirMapaComercialEmNovaAba } from './PropostasMap';
 import { porEstadoFrom, pontosExatosFrom } from '../lib/propostasGeo';
 import { geocodeEndereco } from '../lib/geocoding';
 
@@ -670,7 +670,17 @@ export const PropostasManagement: React.FC = () => {
 
       {porEstado.length > 0 && (
         <div className="mb-6">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Distribuição geográfica</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Distribuição geográfica</p>
+            <button
+              type="button"
+              onClick={abrirMapaComercialEmNovaAba}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <Maximize2 className="h-4 w-4" />
+              Abrir mapa em tela cheia
+            </button>
+          </div>
           <Surface className="mb-4">
             <div className="p-2">
               <PropostasMap data={porEstado} pontos={pontosExatos} />

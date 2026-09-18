@@ -1,7 +1,6 @@
 import React from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ExternalLink } from 'lucide-react';
 import { UF_COORDENADAS, BRASIL_CENTRO } from '../lib/ufCoordenadas';
 import type { EstadoDado, PontoExato } from '../lib/propostasGeo';
 
@@ -11,7 +10,7 @@ const currency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'cur
 // App.tsx) a fazer fullscreen dentro da pagina: fullscreen via CSS/Fullscreen
 // API depende de contexto de stacking dos ancestrais e é fácil de vazar por
 // cima de modais — uma aba propria elimina essa classe de bug de vez.
-const abrirMapaEmNovaAba = () => {
+export const abrirMapaComercialEmNovaAba = () => {
   const url = new URL(window.location.href);
   url.search = '';
   url.hash = '';
@@ -24,10 +23,9 @@ interface PropostasMapProps {
   pontos?: PontoExato[];
   height?: string;
   interactive?: boolean;
-  showOpenButton?: boolean;
 }
 
-export const PropostasMap: React.FC<PropostasMapProps> = ({ data, pontos = [], height = 'h-64', interactive = false, showOpenButton = true }) => {
+export const PropostasMap: React.FC<PropostasMapProps> = ({ data, pontos = [], height = 'h-64', interactive = false }) => {
   const maxValor = Math.max(...data.map((d) => d.valor), 1);
   const estados = data.filter((d) => UF_COORDENADAS[d.uf]).map((d) => ({ ...d, coord: UF_COORDENADAS[d.uf] }));
 
@@ -84,15 +82,6 @@ export const PropostasMap: React.FC<PropostasMapProps> = ({ data, pontos = [], h
           </CircleMarker>
         ))}
       </MapContainer>
-      {showOpenButton && (
-        <button
-          onClick={abrirMapaEmNovaAba}
-          className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-200 rounded-lg shadow hover:bg-white dark:hover:bg-gray-800"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          Abrir em nova aba
-        </button>
-      )}
     </div>
   );
 };
