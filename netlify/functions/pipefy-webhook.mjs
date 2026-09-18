@@ -1,13 +1,31 @@
-// Recebe o webhook do Pipefy quando uma obra fechada e criada no pipe
-// "02-Gestao de Obras - Geoteste" (card.create) e cria Cliente + Obra
-// no Diario automaticamente.
+// Recebe o webhook do Pipefy e cria Cliente + Obra no Diario quando uma
+// obra fecha. Dois caminhos de origem sao aceitos (achados investigando
+// ao vivo — o primeiro NUNCA disparava na pratica):
 //
-// Cadeia de dados (ver reverse-engineering feito via GraphQL na sessao):
-//   card novo no pipe "02-Gestao de Obras"
-//     -> campo "obra_fechada" (connector) aponta pro card mestre no
-//        pipe/database "Obras (Geoteste)"
-//          -> campo "n_mero_da_obra" = codigo limpo (ex: "G2561")
-//          -> campo "empresa" (connector) = nome do cliente ja resolvido
+// 1) Card novo no pipe "02-Gestao de Obras" (304603301), campo
+//    "obra_fechada" (connector) aponta pro card mestre.
+// 2) Card do pipe "01-CRM Comercial" (304572685), fase "05-Aguardando
+//    Assinatura" — quando o comercial preenche o campo "Criar Obra
+//    Fechada" (criar_obra_fechada) num card JA EXISTENTE. Esse e o
+//    caminho real usado no dia a dia; como o card ja existia, nunca eh
+//    um evento "card.create", entao o filtro antigo por action nunca
+//    disparava pra esse caso — a obra so entrava quando eu testava a
+//    function manualmente.
+//
+// Os dois caminhos apontam pro MESMO card mestre no pipe/database
+// "Obras (Geoteste)" (306443518):
+//   -> campo "n_mero_da_obra" = codigo limpo (ex: "G2561")
+//   -> campo "empresa" (connector) = nome do cliente ja resolvido
+//
+// Por isso o dedupe e feito pelo ID do card MESTRE, nao pelo card que
+// disparou o webhook — assim um segundo card da mesma obra (ex: uma
+// mobilizacao extra) nunca vira uma obra duplicada.
+//
+// Como nao ha garantia de qual action exata o Pipefy manda pra "campo
+// preenchido" (nao documentado com certeza), a function nao filtra por
+// nome de action — so precisa achar um card.id no payload e tenta
+// resolver os dois formatos. Eventos sem card.id ou sem nenhum dos dois
+// campos preenchidos sao ignorados silenciosamente.
 //
 // Seguranca: o Pipefy nao assina o payload por padrao, entao o webhook
 // e criado (createWebhook) com um header customizado carregando um
@@ -16,7 +34,6 @@
 // Supabase ficam só aqui, nunca voltam pro navegador.
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const PIPEFY_GRAPHQL_URL = 'https://api.pipefy.com/graphql';
-const OBRAS_PIPE_ID = '304603301'; // 02-Gestao de Obras - Geoteste
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -93,6 +110,25 @@ const supabaseAdminSelect = async (baseUrl, serviceKey, table, params) => {
   return response.json();
 };
 
+// Tenta resolver "nome da obra" + "id do card mestre" a partir dos
+// campos de um card, tentando os dois formatos conhecidos (pipe de
+// Obras, depois pipe do CRM). Retorna null se nenhum bater.
+const resolveNomeEMaster = (fields) => {
+  const nomeObraDireto = fieldDisplayValue(fields, 'nome_do_cliente'); // label real: "Nome da Obra" (pipe de Obras)
+  const masterViaObras = fieldConnectorId(fields, 'obra_fechada');
+  if (nomeObraDireto && masterViaObras) {
+    return { nomeObra: nomeObraDireto, masterCardId: masterViaObras };
+  }
+
+  const masterViaCrm = fieldConnectorId(fields, 'criar_obra_fechada');
+  if (masterViaCrm) {
+    const nomeNegociacao = fieldDisplayValue(fields, 'nome_da_negocia_o');
+    return { nomeObra: nomeNegociacao || null, masterCardId: masterViaCrm };
+  }
+
+  return null;
+};
+
 export default async (request) => {
   if (request.method !== 'POST') return json({ error: 'Método não permitido.' }, 405);
 
@@ -116,22 +152,12 @@ export default async (request) => {
     return json({ error: 'Payload inválido.' }, 400);
   }
 
-  const action = body?.action;
   const cardId = body?.data?.card?.id || body?.data?.id;
-  if (action !== 'card.create' || !cardId) {
-    // Outros eventos (card.move, comment.create etc.) sao ignorados de
-    // proposito — so importa quando uma obra nova entra no pipe.
+  if (!cardId) {
     return json({ ok: true, ignored: true });
   }
 
   try {
-    // Ja importada? (retry do Pipefy ou reprocessamento)
-    const already = await supabaseAdminSelect(
-      supabaseUrl, serviceKey, 'obras',
-      `select=id&pipefy_card_id=eq.${encodeURIComponent(cardId)}&limit=1`,
-    );
-    if (already.length > 0) return json({ ok: true, already_imported: true });
-
     const cardData = await pipefyQuery(apiToken, `{
       card(id: "${cardId}") {
         id
@@ -139,13 +165,25 @@ export default async (request) => {
       }
     }`);
     const cardFields = cardData?.card?.fields;
-    if (!cardFields) return json({ error: 'Card não encontrado no Pipefy.' }, 404);
+    if (!cardFields) return json({ ok: true, ignored: true, reason: 'card não encontrado' });
 
-    const nomeObra = fieldDisplayValue(cardFields, 'nome_do_cliente'); // label real: "Nome da Obra"
-    const masterCardId = fieldConnectorId(cardFields, 'obra_fechada');
-    if (!nomeObra || !masterCardId) {
-      return json({ error: 'Card sem "Nome da Obra" ou sem vínculo "Obra Fechada".' }, 422);
+    const resolved = resolveNomeEMaster(cardFields);
+    if (!resolved || !resolved.masterCardId) {
+      // Evento nao relacionado a fechamento de obra (ex: outro campo
+      // mudou, comentario etc) — ignora sem erro.
+      return json({ ok: true, ignored: true });
     }
+    const { masterCardId } = resolved;
+    let { nomeObra } = resolved;
+
+    // Ja importada? Dedupe pelo card MESTRE, nao pelo card que disparou
+    // o webhook — evita duplicar obra se um segundo card apontar pro
+    // mesmo master (ex: mobilização extra na mesma obra).
+    const already = await supabaseAdminSelect(
+      supabaseUrl, serviceKey, 'obras',
+      `select=id&pipefy_card_id=eq.${encodeURIComponent(masterCardId)}&limit=1`,
+    );
+    if (already.length > 0) return json({ ok: true, already_imported: true });
 
     const masterData = await pipefyQuery(apiToken, `{
       card(id: "${masterCardId}") {
@@ -160,6 +198,7 @@ export default async (request) => {
     if (!empresaNome) {
       return json({ error: 'Não foi possível resolver a empresa (cliente) do card mestre.' }, 422);
     }
+    if (!nomeObra) nomeObra = empresaNome; // fallback quando o card de origem nao tinha nome proprio
 
     // Cliente: acha por nome (case-insensitive) ou cria.
     const existingClients = await supabaseAdminSelect(
@@ -179,7 +218,7 @@ export default async (request) => {
       name: nomeObra.trim(),
       client_id: clientId,
       status: 'ativa',
-      pipefy_card_id: cardId,
+      pipefy_card_id: masterCardId,
     });
 
     return json({ ok: true, obra_id: createdObra.id, client_id: clientId });
