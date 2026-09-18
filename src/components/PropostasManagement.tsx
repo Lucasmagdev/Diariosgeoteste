@@ -11,6 +11,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { DonutChart, FilterBar, IconButton, Modal, PageHeader, PeriodoFilterButtons, StatusBadge, Surface } from './ui';
 import { ObraSelector, ObraOption } from './ObraSelector';
 import { Periodo, periodoSince, regiaoPorUf } from '../lib/periodoFiltro';
+import { PropostasMap } from './PropostasMap';
 
 const MODALIDADES = ['PIT', 'PDA', 'PCE', 'PLACA', 'HAMMER'] as const;
 type Modalidade = typeof MODALIDADES[number];
@@ -275,6 +276,19 @@ export const PropostasManagement: React.FC = () => {
       map.set(key, entry);
     });
     return Array.from(map.entries()).map(([cidade, v]) => ({ cidade, ...v })).sort((a, b) => b.valor - a.valor).slice(0, 8);
+  }, [filteredForCards]);
+
+  const porMotivoRecusa = useMemo(() => {
+    const recusadas = filteredForCards.filter((p) => p.status === 'recusada');
+    const map = new Map<string, { count: number; valor: number }>();
+    recusadas.forEach((p) => {
+      const key = p.motivoRecusa?.trim() || 'Sem motivo registrado';
+      const entry = map.get(key) || { count: 0, valor: 0 };
+      entry.count += 1;
+      entry.valor += p.valorTotal;
+      map.set(key, entry);
+    });
+    return Array.from(map.entries()).map(([motivo, v]) => ({ motivo, ...v })).sort((a, b) => b.count - a.count);
   }, [filteredForCards]);
 
   const resetForm = () => { setForm(emptyForm); setItens([]); };
@@ -589,6 +603,11 @@ export const PropostasManagement: React.FC = () => {
       {porEstado.length > 0 && (
         <div className="mb-6">
           <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Distribuição geográfica</p>
+          <Surface className="mb-4">
+            <div className="p-2">
+              <PropostasMap data={porEstado} />
+            </div>
+          </Surface>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Surface>
               <div className="p-4">
@@ -652,6 +671,29 @@ export const PropostasManagement: React.FC = () => {
             </Surface>
           </div>
         </div>
+      )}
+
+      {porMotivoRecusa.length > 0 && (
+        <Surface className="mb-6">
+          <div className="p-4">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Motivos de recusa</p>
+            <div className="space-y-2">
+              {porMotivoRecusa.map((m) => {
+                const max = Math.max(...porMotivoRecusa.map((x) => x.count), 1);
+                const pct = (m.count / max) * 100;
+                return (
+                  <div key={m.motivo} className="flex items-center gap-3">
+                    <span className="w-48 flex-shrink-0 text-xs text-gray-700 dark:text-gray-200 truncate" title={m.motivo}>{m.motivo}</span>
+                    <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <div className="h-full bg-red-500" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-32 text-right text-xs text-gray-600 dark:text-gray-300 flex-shrink-0">{m.count} ({currency(m.valor)})</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Surface>
       )}
 
       <div className="space-y-3">
