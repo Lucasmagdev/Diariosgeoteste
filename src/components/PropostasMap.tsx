@@ -26,12 +26,15 @@ export const PropostasMap: React.FC<{ data: EstadoDado[] }> = ({ data }) => {
       zoom={fullscreen ? 5 : 4}
       scrollWheelZoom={fullscreen}
       dragging={fullscreen}
-      className="h-full w-full rounded-lg"
+      className="h-full w-full rounded-lg proposta-map-dark"
       style={{ background: '#0f172a' }}
     >
+      {/* OSM padrão — o tile escuro do CartoDB passou a exigir API key
+          paga (mudança deles, sem aviso). Filtro CSS (.proposta-map-dark)
+          escurece/inverte pra manter a estética sem depender de chave. */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {pontos.map((p) => {
         const radius = 8 + (p.valor / maxValor) * 28;

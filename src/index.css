@@ -373,6 +373,13 @@
   .leaflet-popup {
     z-index: 20 !important;
   }
+
+  /* Mapa de Propostas: tiles OSM (claros) invertidos via CSS pra ficar
+     escuro sem precisar de um provedor de tile pago. So no tile-pane —
+     marcadores/popups (fora dessa camada) mantem a cor normal. */
+  .proposta-map-dark .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+  }
   
   /* Garantir que a barra de navegação fique acima de tudo */
   nav[class*="fixed"][class*="bottom-0"] {
